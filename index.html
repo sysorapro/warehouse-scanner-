@@ -150,7 +150,7 @@
     </div>
     <div class="topactions">
       <button class="abtn csv" onclick="exportExcel()"><span class="ico">📊</span><span class="lbls"><span data-i18n="exportBtn">تصدير Excel</span><small data-i18n="exportSub">ملف Excel</small></span></button>
-      <button class="abtn send no-sound" onclick="shareFile()"><span class="ico">📤</span><span class="lbls"><span data-i18n="sendBtn">مشاركة</span><small data-i18n="sendSub">اختر التطبيق</small></span></button>
+      <button class="abtn send" onclick="shareFile()"><span class="ico">📤</span><span class="lbls"><span data-i18n="sendBtn">مشاركة</span><small data-i18n="sendSub">اختر التطبيق</small></span></button>
     </div>
   </div>
 
@@ -293,7 +293,7 @@ const i18n = {
     errInUse:'الكاميرا مستخدمة حاليًا من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مجددًا.',
     errNoApi:'المتصفح لا يدعم الوصول للكاميرا في هذه الصفحة.',
     errGeneric:'تعذّر تشغيل الكاميرا. تأكد من صلاحية الوصول.',
-    csvHeaders:['رقم أمر التوريد','كود الرف','كود الصنف','اسم المسؤول','التاريخ','التوقيت'],
+    csvHeaders:['Order Number','Shelf Code','Item Code','Person Name','Date','Time'],
     entryCodes:(s,i)=>`رف: ${s} · صنف: ${i}`,
     shareTitle:(o)=>`أمر توريد ${o}`, shareText:(o)=>`سجل أمر التوريد رقم ${o}`,
     fileNamePrefix:'أمر_توريد_', noOrderFallback:'بدون_رقم', langBtnLabel:'EN',
@@ -320,7 +320,7 @@ const i18n = {
     errInUse:'The camera is currently used by another app. Close other apps and try again.',
     errNoApi:'This browser does not support camera access on this page.',
     errGeneric:'Could not start the camera. Please check camera permission.',
-    csvHeaders:['Supply Order No.','Shelf Code','Item Code','Responsible Name','Date','Time'],
+    csvHeaders:['Order Number','Shelf Code','Item Code','Person Name','Date','Time'],
     entryCodes:(s,i)=>`Shelf: ${s} · Item: ${i}`,
     shareTitle:(o)=>`Supply Order ${o}`, shareText:(o)=>`Supply order log ${o}`,
     fileNamePrefix:'supply_order_', noOrderFallback:'no_number', langBtnLabel:'AR',
