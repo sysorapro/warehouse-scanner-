@@ -605,10 +605,10 @@ async function sendEmail(){
     const fileName = getFileName();
     const file = new File([blob], fileName, { type: blob.type });
 
-    let canShareFiles = false;
-    try{ canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] })); }catch(e){ canShareFiles = false; }
+    const shareApiExists = typeof navigator.share === 'function';
+    let usedShareSheet = false;
 
-    if (canShareFiles){
+    if (shareApiExists){
       try{
         await Promise.race([
           navigator.share({
@@ -622,12 +622,13 @@ async function sendEmail(){
         return;
       }catch(shareErr){
         if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
-        // TimeoutError or anything else: fall through to the mailto fallback below
+        // NotSupportedError (e.g. this file type/size isn't shareable on this device)
+        // or TimeoutError: fall through to the mailto fallback below
       }
     }
 
-    if (!canShareFiles){
-      toast(lang === 'ar' ? 'جارٍ فتح تطبيق البريد...' : 'Opening your mail app...');
+    if (!usedShareSheet){
+      toast(lang === 'ar' ? 'شاشة المشاركة مش مدعومة هنا، جارٍ فتح تطبيق البريد...' : 'Share sheet not supported here, opening your mail app...');
     }
 
     // Fallback: mailto with summary in body (attachments aren't supported by mailto links)
