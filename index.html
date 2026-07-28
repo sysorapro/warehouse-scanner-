@@ -365,7 +365,9 @@ function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=> t.classList.remove('show'), 2200);
+  const duration = Math.min(6000, Math.max(2200, msg.length * 60));
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=> t.classList.remove('show'), duration);
 }
 
 async function startScan(target){
@@ -575,6 +577,8 @@ async function shareFile(){
 
     const shareApiExists = typeof navigator.share === 'function';
 
+    let shareErrorInfo = null;
+
     if (shareApiExists){
       try{
         await Promise.race([
@@ -589,11 +593,14 @@ async function shareFile(){
         return;
       }catch(shareErr){
         if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
-        // NotSupportedError or TimeoutError: fall through to a plain download below
+        shareErrorInfo = (shareErr && (shareErr.name || shareErr.message)) ? `${shareErr.name || ''} ${shareErr.message || ''}`.trim() : String(shareErr);
+        // fall through to a plain download below
       }
+    } else {
+      shareErrorInfo = lang === 'ar' ? 'المتصفح مش بيدعم خاصية المشاركة خالص' : 'This browser has no Share API at all';
     }
 
-    // This device/browser has no share sheet at all — just download the file
+    // This device/browser couldn't share directly — download the file instead
     // so the person can still send it manually from their downloads/file app.
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -601,8 +608,8 @@ async function shareFile(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast(lang === 'ar'
-      ? 'شاشة المشاركة مش مدعومة هنا — تم تنزيل الملف، شاركه يدويًا من التنزيلات'
-      : 'Share sheet not supported here — file downloaded, share it manually from your downloads');
+      ? `تم تنزيل الملف بدل المشاركة (السبب: ${shareErrorInfo || 'غير معروف'})`
+      : `File downloaded instead of sharing (reason: ${shareErrorInfo || 'unknown'})`);
   }catch(err){
     toast((lang === 'ar' ? 'تعذّرت المشاركة: ' : 'Could not share: ') + (err && err.message ? err.message : String(err)));
   }
