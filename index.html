@@ -623,6 +623,10 @@ async function sendEmail(){
       }
     }
 
+    if (!canShareFiles){
+      toast(lang === 'ar' ? 'جارٍ فتح تطبيق البريد...' : 'Opening your mail app...');
+    }
+
     // Fallback: mailto with summary in body (attachments aren't supported by mailto links)
     const subject = encodeURIComponent(t('mailSubject')(orderNo));
     let body = t('mailBodyHeader')(orderNo);
@@ -636,7 +640,19 @@ async function sendEmail(){
       return;
     }
 
-    window.location.href = mailtoUrl;
+    const mailLink = document.createElement('a');
+    mailLink.href = mailtoUrl;
+    document.body.appendChild(mailLink);
+    mailLink.click();
+    document.body.removeChild(mailLink);
+
+    // If no mail app is configured, mailto: often fails silently with no
+    // error and no visible reaction — give the user a way forward either way.
+    setTimeout(()=>{
+      toast(lang === 'ar'
+        ? 'لو محصلش تفاعل، جرّب زر "تصدير Excel" وابعت الملف يدويًا من أي تطبيق'
+        : 'If nothing opened, try "Export Excel" and send the file manually from any app');
+    }, 2500);
   }catch(err){
     toast((lang === 'ar' ? 'تعذّر فتح البريد: ' : 'Could not open mail: ') + (err && err.message ? err.message : String(err)));
   }
