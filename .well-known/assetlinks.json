@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.sysorapro.twa",
+    "sha256_cert_fingerprints": ["CC:BB:C9:9C:42:16:5E:4C:CF:51:D3:6D:E3:B8:0C:7F:77:1D:69:05:54:88:27:A6:5E:8A:E1:3C:D3:D9:D7:2C"]
+  }
+}]
