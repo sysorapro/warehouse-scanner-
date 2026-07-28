@@ -67,20 +67,16 @@
   .field:last-child{ margin-bottom:0; }
 
   /* Scan slots */
-  .slots{ display:flex; flex-direction:column; gap:10px; }
-  .slot{ display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface-2); border:1px dashed var(--border); border-radius:14px; padding:12px 14px; position:relative; }
+  .slots{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .slot{ background:var(--surface-2); border:1px dashed var(--border); border-radius:14px; padding:14px 10px; text-align:center; position:relative; }
   .slot.filled{ border-style:solid; border-color:var(--mint); }
-  .slot.shelf-slot{ border-color:var(--amber); }
-  .slot.shelf-slot.filled{ background:linear-gradient(90deg, rgba(232,163,61,.10), var(--surface-2)); }
-  .slot .txt{ flex:1; min-width:0; }
-  .slot .lbl{ font-size:11px; color:var(--muted); margin-bottom:4px; }
+  .slot .lbl{ font-size:11px; color:var(--muted); margin-bottom:6px; }
   .slot .val{ font-family:'Cairo'; font-weight:800; font-size:15px; word-break:break-all; min-height:20px; }
   .slot .val.empty{ color:var(--muted); font-weight:500; font-size:12px; font-family:'Tajawal'; }
-  .scanbtn{ flex-shrink:0; border:none; border-radius:10px; padding:10px 16px; font-family:'Cairo'; font-weight:700; font-size:12.5px; background:var(--amber); color:#1a1204; white-space:nowrap; }
+  .scanbtn{ margin-top:10px; width:100%; border:none; border-radius:10px; padding:9px; font-family:'Cairo'; font-weight:700; font-size:12.5px; background:var(--amber); color:#1a1204; }
 
   .addbtn{ width:100%; border:none; border-radius:13px; padding:14px; font-family:'Cairo'; font-weight:800; font-size:15px; background:var(--mint); color:#062018; opacity:.4; pointer-events:none; transition:.2s; }
   .addbtn.ready{ opacity:1; pointer-events:auto; }
-  .hint-note{ font-size:11.5px; color:var(--mint); text-align:center; margin-top:10px; }
 
   /* Entries table */
   .entry{ display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--border); }
@@ -97,7 +93,7 @@
   .abtn .ico{ font-size:15px; }
   .abtn .lbls{ display:flex; flex-direction:column; align-items:flex-start; line-height:1.15; }
   .abtn small{ font-family:'Tajawal'; font-weight:400; font-size:9.5px; opacity:.75; }
-  .abtn.csv{ background:var(--amber); color:#1a1204; }
+  .abtn.csv{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
   .abtn.send{ background:var(--amber); color:#1a1204; }
 
   /* Camera modal */
@@ -172,22 +168,17 @@
     <div class="card">
       <h3><span class="n">2</span> <span data-i18n="sectionScan">مسح الأكواد</span></h3>
       <div class="slots">
-        <div class="slot shelf-slot" id="slotShelf">
-          <div class="txt">
-            <div class="lbl" data-i18n="shelfLabel">كود الرف</div>
-            <div class="val empty" id="valShelf" data-i18n="notScanned">لم يُمسح بعد</div>
-          </div>
+        <div class="slot" id="slotShelf">
+          <div class="lbl" data-i18n="shelfLabel">كود الرف</div>
+          <div class="val empty" id="valShelf" data-i18n="notScanned">لم يُمسح بعد</div>
           <button class="scanbtn" onclick="startScan('shelf')"><span data-i18n="scanShelfBtn">📷 مسح الرف</span></button>
         </div>
         <div class="slot" id="slotItem">
-          <div class="txt">
-            <div class="lbl" data-i18n="itemLabel">كود الصنف</div>
-            <div class="val empty" id="valItem" data-i18n="notScanned">لم يُمسح بعد</div>
-          </div>
+          <div class="lbl" data-i18n="itemLabel">كود الصنف</div>
+          <div class="val empty" id="valItem" data-i18n="notScanned">لم يُمسح بعد</div>
           <button class="scanbtn" onclick="startScan('item')"><span data-i18n="scanItemBtn">📷 مسح الصنف</span></button>
         </div>
       </div>
-      <div class="hint-note" id="shelfHint" style="display:none;"></div>
       <button class="addbtn" id="addBtn" onclick="addEntry()" style="margin-top:14px;"><span data-i18n="addBtn">➕ إضافة السطر</span></button>
     </div>
 
@@ -311,8 +302,7 @@ const i18n = {
     shareTitle:(o)=>`أمر توريد ${o}`, shareText:(o,e)=>`مرفق سجل أمر التوريد رقم ${o} — الرجاء الإرسال إلى: ${e}`,
     mailSubject:(o)=>`سجل أمر توريد رقم ${o}`, mailBodyHeader:(o)=>`سجل أمر التوريد رقم: ${o}\n\n`,
     mailBodyLine:(i,e)=>`${i+1}. رف: ${e.shelf} — صنف: ${e.item} — ${e.date} ${e.time} — ${e.responsible}\n`,
-    fileNamePrefix:'أمر_توريد_', noOrderFallback:'بدون_رقم', langBtnLabel:'EN',
-    shelfLockedHint:(s)=>`✓ الرف "${s}" محفوظ — امسح كود الصنف التالي مباشرة لإضافته لنفس الرف`
+    fileNamePrefix:'أمر_توريد_', noOrderFallback:'بدون_رقم', langBtnLabel:'EN'
   },
   en: {
     dir:'ltr', htmlLang:'en',
@@ -340,8 +330,7 @@ const i18n = {
     shareTitle:(o)=>`Supply Order ${o}`, shareText:(o,e)=>`Attached: log for supply order ${o} — please send to: ${e}`,
     mailSubject:(o)=>`Supply order log ${o}`, mailBodyHeader:(o)=>`Supply order log: ${o}\n\n`,
     mailBodyLine:(i,e)=>`${i+1}. Shelf: ${e.shelf} — Item: ${e.item} — ${e.date} ${e.time} — ${e.responsible}\n`,
-    fileNamePrefix:'supply_order_', noOrderFallback:'no_number', langBtnLabel:'AR',
-    shelfLockedHint:(s)=>`✓ Shelf "${s}" is locked in — scan the next item code to add it under the same shelf`
+    fileNamePrefix:'supply_order_', noOrderFallback:'no_number', langBtnLabel:'AR'
   }
 };
 
@@ -370,9 +359,6 @@ function applyLang(){
   });
   document.getElementById('langBtn').textContent = dict.langBtnLabel;
   document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
-  if (currentShelf){
-    document.getElementById('shelfHint').textContent = t('shelfLockedHint')(currentShelf);
-  }
   renderEntries();
 }
 
@@ -464,9 +450,6 @@ function onScanSuccess(text){
     document.getElementById('valShelf').textContent = text;
     document.getElementById('valShelf').classList.remove('empty');
     document.getElementById('slotShelf').classList.add('filled');
-    const hint = document.getElementById('shelfHint');
-    hint.textContent = t('shelfLockedHint')(text);
-    hint.style.display = 'block';
   } else {
     currentItem = text;
     document.getElementById('valItem').textContent = text;
@@ -507,13 +490,13 @@ function addEntry(){
 
   entries.push({ orderNo, shelf: currentShelf, item: currentItem, responsible, date, time });
 
-  // Keep the shelf code locked in — only clear the item slot so the next
-  // scan can add another item under the same shelf without rescanning it.
-  currentItem = '';
+  currentShelf = ''; currentItem = '';
+  document.getElementById('valShelf').textContent = t('notScanned');
+  document.getElementById('valShelf').classList.add('empty');
+  document.getElementById('slotShelf').classList.remove('filled');
   document.getElementById('valItem').textContent = t('notScanned');
   document.getElementById('valItem').classList.add('empty');
   document.getElementById('slotItem').classList.remove('filled');
-  document.getElementById('shelfHint').textContent = t('shelfLockedHint')(currentShelf);
   updateAddBtn();
 
   renderEntries();
@@ -599,63 +582,28 @@ async function sendEmail(){
     return;
   }
 
-  try{
-    const orderNo = document.getElementById('orderNo').value.trim() || '—';
-    const blob = buildXLSXBlob();
-    const fileName = getFileName();
-    const file = new File([blob], fileName, { type: blob.type });
+  const orderNo = document.getElementById('orderNo').value.trim() || '—';
+  const blob = buildXLSXBlob();
+  const fileName = getFileName();
+  const file = new File([blob], fileName, { type: blob.type });
 
-    let canShareFiles = false;
-    try{ canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] })); }catch(e){ canShareFiles = false; }
-
-    if (canShareFiles){
-      try{
-        await navigator.share({
-          files: [file],
-          title: t('shareTitle')(orderNo),
-          text: t('shareText')(orderNo, targetEmail)
-        });
-        toast(t('toastShareDone'));
-        return;
-      }catch(shareErr){
-        if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
-        // otherwise fall through to the mailto fallback below
-      }
-    }
-
-    if (!canShareFiles){
-      toast(lang === 'ar' ? 'جارٍ فتح تطبيق البريد...' : 'Opening your mail app...');
-    }
-
-    // Fallback: mailto with summary in body (attachments aren't supported by mailto links)
-    const subject = encodeURIComponent(t('mailSubject')(orderNo));
-    let body = t('mailBodyHeader')(orderNo);
-    entries.forEach((e,i)=>{ body += t('mailBodyLine')(i, e); });
-    const mailtoUrl = `mailto:${targetEmail}?subject=${subject}&body=${encodeURIComponent(body)}`;
-
-    if (mailtoUrl.length > 1800){
-      toast(lang === 'ar'
-        ? 'عدد الأصناف كبير جدًا لإرسالها في نص الإيميل — صدّر ملف Excel وأرفقه يدويًا بدلاً من ذلك'
-        : 'Too many items for an email body — export the Excel file and attach it manually instead');
+  if (navigator.canShare && navigator.canShare({ files: [file] })){
+    try{
+      await navigator.share({
+        files: [file],
+        title: t('shareTitle')(orderNo),
+        text: t('shareText')(orderNo, targetEmail)
+      });
+      toast(t('toastShareDone'));
       return;
-    }
-
-    const mailLink = document.createElement('a');
-    mailLink.href = mailtoUrl;
-    document.body.appendChild(mailLink);
-    mailLink.click();
-    document.body.removeChild(mailLink);
-
-    // If no mail app is configured, mailto: often fails silently with no
-    // error and no visible reaction — give the user a way forward either way.
-    setTimeout(()=>{
-      toast(lang === 'ar'
-        ? 'لو محصلش تفاعل، جرّب زر "تصدير Excel" وابعت الملف يدويًا من أي تطبيق'
-        : 'If nothing opened, try "Export Excel" and send the file manually from any app');
-    }, 2500);
-  }catch(err){
-    toast((lang === 'ar' ? 'تعذّر فتح البريد: ' : 'Could not open mail: ') + (err && err.message ? err.message : String(err)));
+    }catch(e){ /* user cancelled or unsupported, fall back below */ }
   }
+
+  // Fallback: mailto with summary in body (no attachment support)
+  const subject = encodeURIComponent(t('mailSubject')(orderNo));
+  let body = t('mailBodyHeader')(orderNo);
+  entries.forEach((e,i)=>{ body += t('mailBodyLine')(i, e); });
+  window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${encodeURIComponent(body)}`;
 }
 
 applyLang();
