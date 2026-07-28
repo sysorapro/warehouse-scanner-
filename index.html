@@ -147,10 +147,11 @@
       </div>
       <button class="gear" id="soundBtn" onclick="toggleSound()">🔊</button>
       <button class="gear lang-toggle" id="langBtn" onclick="toggleLang()">EN</button>
+      <button class="gear" onclick="openSettings()">⚙</button>
     </div>
     <div class="topactions">
       <button class="abtn csv" onclick="exportExcel()"><span class="ico">📊</span><span class="lbls"><span data-i18n="exportBtn">تصدير Excel</span><small data-i18n="exportSub">ملف Excel</small></span></button>
-      <button class="abtn send no-sound" onclick="shareFile()"><span class="ico">📤</span><span class="lbls"><span data-i18n="sendBtn">مشاركة</span><small data-i18n="sendSub">اختر التطبيق</small></span></button>
+      <button class="abtn send" onclick="sendEmail()"><span class="ico">📧</span><span class="lbls"><span data-i18n="sendBtn">إرسال بالبريد</span><small data-i18n="sendSub">مشاركة الملف</small></span></button>
     </div>
   </div>
 
@@ -219,6 +220,18 @@
   <div class="modal-hint" data-i18n="scanHint">وجّه الكاميرا نحو الباركود أو كود QR</div>
 </div>
 
+<!-- Settings sheet -->
+<div class="sheet-bg" id="sheetBg" onclick="closeSettings()"></div>
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-handle"></div>
+  <h3 data-i18n="settingsTitle">إعدادات الإرسال</h3>
+  <div class="field">
+    <label data-i18n="emailLabel">البريد الإلكتروني للإرسال إليه</label>
+    <input type="email" id="targetEmail" data-i18n-ph="emailPh" placeholder="example@company.com">
+  </div>
+  <button class="close-sheet" onclick="closeSettings()"><span data-i18n="saveClose">حفظ وإغلاق</span></button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -266,7 +279,7 @@ function toggleSound(){
 
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('button');
-  if (btn && !btn.classList.contains('no-sound')) playClickSound();
+  if (btn) playClickSound();
 }, true);
 </script>
 
@@ -280,13 +293,13 @@ const i18n = {
     sectionScan:'مسح الأكواد', shelfLabel:'كود الرف', itemLabel:'كود الصنف', notScanned:'لم يُمسح بعد',
     scanShelfBtn:'📷 مسح الرف', scanItemBtn:'📷 مسح الصنف', addBtn:'➕ إضافة السطر',
     sectionEntries:'السجلات المسجّلة', emptyState:'لسه مفيش أي أصناف متسجلة في أمر التوريد ده',
-    exportBtn:'تصدير Excel', exportSub:'ملف Excel', sendBtn:'مشاركة', sendSub:'اختر التطبيق',
+    exportBtn:'تصدير Excel', exportSub:'ملف Excel', sendBtn:'إرسال بالبريد', sendSub:'مشاركة الملف',
     scanTitleShelf:'مسح كود الرف', scanTitleItem:'مسح كود الصنف', scanHint:'وجّه الكاميرا نحو الباركود أو كود QR',
+    settingsTitle:'إعدادات الإرسال', emailLabel:'البريد الإلكتروني للإرسال إليه', emailPh:'example@company.com', saveClose:'حفظ وإغلاق',
     toastNeedOrder:'من فضلك أدخل رقم أمر التوريد واسم المسؤول أولاً', toastAdded:'تم إضافة الصنف ✓',
     toastNoData:'لا يوجد بيانات لتصديرها بعد', toastExported:'تم تصدير الملف ✓',
-    toastNoDataSend:'لا يوجد بيانات للمشاركة بعد',
-    toastShareGuide:'تم تنزيل الملف ✓ — دوس على إشعار "تم التنزيل" تحت الشاشة واختر "فتح"، وبعدها استخدم زر المشاركة داخل التطبيق اللي هيفتح بيه الملف',
-    toastShareGuide2:'تم فتح شاشة المشاركة ✓',
+    toastNoDataSend:'لا يوجد بيانات لإرسالها بعد', toastSetEmail:'حدد البريد الإلكتروني أولاً من الإعدادات ⚙',
+    toastShareDone:'اختر تطبيق البريد من القائمة ✓',
     errInsecure:'تعذّر الوصول إلى الكاميرا: الصفحة مفتوحة بدون اتصال آمن (HTTPS). ارفع الملف على استضافة HTTPS (مثل GitHub Pages أو Netlify) وافتحه من هناك.',
     errDenied:'تم رفض إذن الكاميرا. افتح إعدادات المتصفح وفعّل صلاحية الكاميرا لهذا الموقع.',
     errNotFound:'لم يتم العثور على كاميرا في هذا الجهاز.',
@@ -295,7 +308,9 @@ const i18n = {
     errGeneric:'تعذّر تشغيل الكاميرا. تأكد من صلاحية الوصول.',
     csvHeaders:['رقم أمر التوريد','كود الرف','كود الصنف','اسم المسؤول','التاريخ','التوقيت'],
     entryCodes:(s,i)=>`رف: ${s} · صنف: ${i}`,
-    shareTitle:(o)=>`أمر توريد ${o}`, shareText:(o)=>`سجل أمر التوريد رقم ${o}`,
+    shareTitle:(o)=>`أمر توريد ${o}`, shareText:(o,e)=>`مرفق سجل أمر التوريد رقم ${o} — الرجاء الإرسال إلى: ${e}`,
+    mailSubject:(o)=>`سجل أمر توريد رقم ${o}`, mailBodyHeader:(o)=>`سجل أمر التوريد رقم: ${o}\n\n`,
+    mailBodyLine:(i,e)=>`${i+1}. رف: ${e.shelf} — صنف: ${e.item} — ${e.date} ${e.time} — ${e.responsible}\n`,
     fileNamePrefix:'أمر_توريد_', noOrderFallback:'بدون_رقم', langBtnLabel:'EN',
     shelfLockedHint:(s)=>`✓ الرف "${s}" محفوظ — امسح كود الصنف التالي مباشرة لإضافته لنفس الرف`
   },
@@ -307,13 +322,13 @@ const i18n = {
     sectionScan:'Scan Codes', shelfLabel:'Shelf Code', itemLabel:'Item Code', notScanned:'Not scanned yet',
     scanShelfBtn:'📷 Scan Shelf', scanItemBtn:'📷 Scan Item', addBtn:'➕ Add Row',
     sectionEntries:'Logged Entries', emptyState:'No items logged for this supply order yet',
-    exportBtn:'Export Excel', exportSub:'Excel file', sendBtn:'Share', sendSub:'Choose an app',
+    exportBtn:'Export Excel', exportSub:'Excel file', sendBtn:'Send by Email', sendSub:'Share file',
     scanTitleShelf:'Scan Shelf Code', scanTitleItem:'Scan Item Code', scanHint:'Point the camera at the barcode or QR code',
+    settingsTitle:'Send Settings', emailLabel:'Recipient email address', emailPh:'example@company.com', saveClose:'Save & Close',
     toastNeedOrder:'Please enter the order number and responsible name first', toastAdded:'Item added ✓',
     toastNoData:'No data to export yet', toastExported:'File exported ✓',
-    toastNoDataSend:'No data to share yet',
-    toastShareGuide:'File downloaded ✓ — tap the "Downloaded" notification below and choose "Open", then use that app\'s own Share button',
-    toastShareGuide2:'Share sheet opened ✓',
+    toastNoDataSend:'No data to send yet', toastSetEmail:'Set the recipient email in settings first ⚙',
+    toastShareDone:'Choose your email app from the list ✓',
     errInsecure:'Camera blocked: this page is open without a secure (HTTPS) connection. Host the file on HTTPS (e.g. GitHub Pages or Netlify) and open it from there.',
     errDenied:'Camera permission was denied. Open your browser settings and allow camera access for this site.',
     errNotFound:'No camera was found on this device.',
@@ -322,7 +337,9 @@ const i18n = {
     errGeneric:'Could not start the camera. Please check camera permission.',
     csvHeaders:['Supply Order No.','Shelf Code','Item Code','Responsible Name','Date','Time'],
     entryCodes:(s,i)=>`Shelf: ${s} · Item: ${i}`,
-    shareTitle:(o)=>`Supply Order ${o}`, shareText:(o)=>`Supply order log ${o}`,
+    shareTitle:(o)=>`Supply Order ${o}`, shareText:(o,e)=>`Attached: log for supply order ${o} — please send to: ${e}`,
+    mailSubject:(o)=>`Supply order log ${o}`, mailBodyHeader:(o)=>`Supply order log: ${o}\n\n`,
+    mailBodyLine:(i,e)=>`${i+1}. Shelf: ${e.shelf} — Item: ${e.item} — ${e.date} ${e.time} — ${e.responsible}\n`,
     fileNamePrefix:'supply_order_', noOrderFallback:'no_number', langBtnLabel:'AR',
     shelfLockedHint:(s)=>`✓ Shelf "${s}" is locked in — scan the next item code to add it under the same shelf`
   }
@@ -334,6 +351,7 @@ let scanTarget = null;
 let html5QrCode = null;
 let currentShelf = '';
 let currentItem = '';
+let targetEmail = '';
 
 function t(key){ return i18n[lang][key]; }
 
@@ -367,9 +385,18 @@ function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  const duration = Math.min(6000, Math.max(2200, msg.length * 60));
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(()=> t.classList.remove('show'), duration);
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+function openSettings(){
+  document.getElementById('targetEmail').value = targetEmail;
+  document.getElementById('sheetBg').classList.add('open');
+  document.getElementById('settingsSheet').classList.add('open');
+}
+function closeSettings(){
+  targetEmail = document.getElementById('targetEmail').value.trim();
+  document.getElementById('sheetBg').classList.remove('open');
+  document.getElementById('settingsSheet').classList.remove('open');
 }
 
 async function startScan(target){
@@ -564,39 +591,70 @@ function exportExcel(){
   toast(t('toastExported'));
 }
 
-async function shareFile(){
+async function sendEmail(){
   if (entries.length === 0){ toast(t('toastNoDataSend')); return; }
+  if (!targetEmail){ openSettings(); toast(t('toastSetEmail')); return; }
   if (typeof XLSX === 'undefined'){
     toast(lang === 'ar' ? 'مكتبة Excel لسه بتتحمّل، حاول تاني بعد ثانيتين' : 'Excel library still loading, try again in a moment');
     return;
   }
 
   try{
+    const orderNo = document.getElementById('orderNo').value.trim() || '—';
     const blob = buildXLSXBlob();
     const fileName = getFileName();
+    const file = new File([blob], fileName, { type: blob.type });
 
-    if (typeof navigator.share === 'function'){
+    let canShareFiles = false;
+    try{ canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] })); }catch(e){ canShareFiles = false; }
+
+    if (canShareFiles){
       try{
-        const file = new File([blob], fileName, { type: blob.type });
-        await navigator.share({ files: [file] }); // files only, no title/text this time
-        toast(t('toastShareGuide2'));
-        playAddSound();
+        await navigator.share({
+          files: [file],
+          title: t('shareTitle')(orderNo),
+          text: t('shareText')(orderNo, targetEmail)
+        });
+        toast(t('toastShareDone'));
         return;
       }catch(shareErr){
         if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
-        // any other failure: fall through to the guaranteed download below
+        // otherwise fall through to the mailto fallback below
       }
     }
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fileName;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    playAddSound();
-    toast(t('toastShareGuide'));
+    if (!canShareFiles){
+      toast(lang === 'ar' ? 'جارٍ فتح تطبيق البريد...' : 'Opening your mail app...');
+    }
+
+    // Fallback: mailto with summary in body (attachments aren't supported by mailto links)
+    const subject = encodeURIComponent(t('mailSubject')(orderNo));
+    let body = t('mailBodyHeader')(orderNo);
+    entries.forEach((e,i)=>{ body += t('mailBodyLine')(i, e); });
+    const mailtoUrl = `mailto:${targetEmail}?subject=${subject}&body=${encodeURIComponent(body)}`;
+
+    if (mailtoUrl.length > 1800){
+      toast(lang === 'ar'
+        ? 'عدد الأصناف كبير جدًا لإرسالها في نص الإيميل — صدّر ملف Excel وأرفقه يدويًا بدلاً من ذلك'
+        : 'Too many items for an email body — export the Excel file and attach it manually instead');
+      return;
+    }
+
+    const mailLink = document.createElement('a');
+    mailLink.href = mailtoUrl;
+    document.body.appendChild(mailLink);
+    mailLink.click();
+    document.body.removeChild(mailLink);
+
+    // If no mail app is configured, mailto: often fails silently with no
+    // error and no visible reaction — give the user a way forward either way.
+    setTimeout(()=>{
+      toast(lang === 'ar'
+        ? 'لو محصلش تفاعل، جرّب زر "تصدير Excel" وابعت الملف يدويًا من أي تطبيق'
+        : 'If nothing opened, try "Export Excel" and send the file manually from any app');
+    }, 2500);
   }catch(err){
-    toast((lang === 'ar' ? 'تعذّر تنزيل الملف: ' : 'Could not download file: ') + (err && err.message ? err.message : String(err)));
+    toast((lang === 'ar' ? 'تعذّر فتح البريد: ' : 'Could not open mail: ') + (err && err.message ? err.message : String(err)));
   }
 }
 
