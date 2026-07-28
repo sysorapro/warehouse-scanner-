@@ -150,7 +150,7 @@
     </div>
     <div class="topactions">
       <button class="abtn csv" onclick="exportExcel()"><span class="ico">📊</span><span class="lbls"><span data-i18n="exportBtn">تصدير Excel</span><small data-i18n="exportSub">ملف Excel</small></span></button>
-      <button class="abtn send" onclick="shareFile()"><span class="ico">📤</span><span class="lbls"><span data-i18n="sendBtn">مشاركة</span><small data-i18n="sendSub">اختر التطبيق</small></span></button>
+      <button class="abtn send no-sound" onclick="shareFile()"><span class="ico">📤</span><span class="lbls"><span data-i18n="sendBtn">مشاركة</span><small data-i18n="sendSub">اختر التطبيق</small></span></button>
     </div>
   </div>
 
@@ -266,7 +266,7 @@ function toggleSound(){
 
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('button');
-  if (btn) playClickSound();
+  if (btn && !btn.classList.contains('no-sound')) playClickSound();
 }, true);
 </script>
 
@@ -590,6 +590,7 @@ async function shareFile(){
           new Promise((_, reject) => setTimeout(()=> reject({ name: 'TimeoutError' }), 15000))
         ]);
         toast(t('toastShareDone'));
+        playAddSound();
         return;
       }catch(shareErr){
         if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
