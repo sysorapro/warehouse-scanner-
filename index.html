@@ -610,16 +610,19 @@ async function sendEmail(){
 
     if (canShareFiles){
       try{
-        await navigator.share({
-          files: [file],
-          title: t('shareTitle')(orderNo),
-          text: t('shareText')(orderNo, targetEmail)
-        });
+        await Promise.race([
+          navigator.share({
+            files: [file],
+            title: t('shareTitle')(orderNo),
+            text: t('shareText')(orderNo, targetEmail)
+          }),
+          new Promise((_, reject) => setTimeout(()=> reject({ name: 'TimeoutError' }), 15000))
+        ]);
         toast(t('toastShareDone'));
         return;
       }catch(shareErr){
         if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
-        // otherwise fall through to the mailto fallback below
+        // TimeoutError or anything else: fall through to the mailto fallback below
       }
     }
 
@@ -640,11 +643,7 @@ async function sendEmail(){
       return;
     }
 
-    const mailLink = document.createElement('a');
-    mailLink.href = mailtoUrl;
-    document.body.appendChild(mailLink);
-    mailLink.click();
-    document.body.removeChild(mailLink);
+    window.location.href = mailtoUrl;
 
     // If no mail app is configured, mailto: often fails silently with no
     // error and no visible reaction — give the user a way forward either way.
