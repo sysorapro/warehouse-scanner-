@@ -89,6 +89,8 @@
   .slot .val.empty{ color:var(--muted); font-weight:500; font-size:12px; font-family:'Tajawal'; }
   .slot .item-name{ font-size:11.5px; color:var(--mint); margin-top:3px; }
   .scanbtn{ flex-shrink:0; border:none; border-radius:10px; padding:10px 16px; font-family:'Cairo'; font-weight:700; font-size:12.5px; background:var(--amber); color:#1a1204; white-space:nowrap; }
+  .slot-btns{ display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+  .manualbtn{ border:1.5px solid var(--amber); background:transparent; color:var(--amber); border-radius:9px; padding:6px 10px; font-family:'Cairo'; font-weight:800; font-size:11.5px; white-space:nowrap; }
 
   .addbtn{ width:100%; border:none; border-radius:13px; padding:14px; font-family:'Cairo'; font-weight:800; font-size:15px; background:var(--mint); color:#062018; opacity:.4; pointer-events:none; transition:.2s; }
   .addbtn.ready{ opacity:1; pointer-events:auto; }
@@ -198,7 +200,10 @@
             <div class="val empty" id="valItem" data-i18n="notScanned">لم يُمسح بعد</div>
             <div class="item-name" id="valItemName" style="display:none;"></div>
           </div>
-          <button class="scanbtn" onclick="startScan('item')"><span data-i18n="scanItemBtn">📷 مسح الصنف</span></button>
+          <div class="slot-btns">
+            <button class="scanbtn" onclick="startScan('item')"><span data-i18n="scanItemBtn">📷 مسح الصنف</span></button>
+            <button class="manualbtn" onclick="manualItemEntry()"><span data-i18n="manualItemBtn">⌨️ يدوي</span></button>
+          </div>
         </div>
       </div>
       <div class="hint-note" id="shelfHint" style="display:none;"></div>
@@ -294,6 +299,7 @@ const i18n = {
     responsibleLabel:'اسم المسؤول', responsiblePh:'اسم الموظف المسؤول',
     sectionScan:'مسح الأكواد', shelfLabel:'كود الرف', itemLabel:'كود الصنف', notScanned:'لم يُمسح بعد',
     scanShelfBtn:'📷 مسح الرف', scanItemBtn:'📷 مسح الصنف', addBtn:'➕ إضافة السطر',
+    manualItemBtn:'⌨️ يدوي', manualPrompt:'اكتب كود الصنف يدويًا:', manualShelfPrompt:'اكتب كود الرف يدويًا:',
     sectionEntries:'السجلات المسجّلة', emptyState:'لسه مفيش أي أصناف متسجلة في أمر التوريد ده',
     exportBtn:'تصدير Excel', exportSub:'ملف Excel', sendBtn:'مشاركة', sendSub:'اختر التطبيق',
     scanTitleShelf:'مسح كود الرف', scanTitleItem:'مسح كود الصنف', scanHint:'وجّه الكاميرا نحو الباركود أو كود QR',
@@ -321,6 +327,7 @@ const i18n = {
     responsibleLabel:'Responsible Name', responsiblePh:'Employee in charge',
     sectionScan:'Scan Codes', shelfLabel:'Shelf Code', itemLabel:'Item Code', notScanned:'Not scanned yet',
     scanShelfBtn:'📷 Scan Shelf', scanItemBtn:'📷 Scan Item', addBtn:'➕ Add Row',
+    manualItemBtn:'⌨️ Manual', manualPrompt:'Type the item code manually:', manualShelfPrompt:'Type the shelf code manually:',
     sectionEntries:'Logged Entries', emptyState:'No items logged for this supply order yet',
     exportBtn:'Export Excel', exportSub:'Excel file', sendBtn:'Share', sendSub:'Choose an app',
     scanTitleShelf:'Scan Shelf Code', scanTitleItem:'Scan Item Code', scanHint:'Point the camera at the barcode or QR code',
@@ -499,25 +506,64 @@ function setTorch(on){
   }catch(e){ /* torch not supported on this device/browser — ignore silently */ }
 }
 
+function extractItemCode(raw){
+  // Some item barcodes append an expiry date after a separator (_, /, or \),
+  // e.g. "2584786_12.26". Only the part before the first separator is the
+  // actual item code we want to keep.
+  const idx = raw.search(/[_/\\]/);
+  return idx === -1 ? raw : raw.slice(0, idx);
+}
+
+function applyItemCode(rawText){
+  const code = extractItemCode(rawText.trim());
+  currentItem = code;
+  const foundName = itemLookup[code] || '';
+  currentItemName = foundName || (itemLookupLoaded ? 'Not Found' : 'Not Connected');
+  document.getElementById('valItem').textContent = code;
+  document.getElementById('valItem').classList.remove('empty');
+  document.getElementById('slotItem').classList.add('filled');
+  const nameEl = document.getElementById('valItemName');
+  nameEl.textContent = currentItemName;
+  nameEl.style.display = 'block';
+  updateAddBtn();
+}
+
+function manualItemEntry(){
+  const val = window.prompt(t('manualPrompt'), '');
+  if (val === null) return; // cancelled
+  const trimmed = val.trim();
+  if (!trimmed) return;
+  applyItemCode(trimmed);
+  if (navigator.vibrate) navigator.vibrate(80);
+  playScanSuccessSound();
+}
+
+function applyShelfCode(text){
+  currentShelf = text.trim();
+  document.getElementById('valShelf').textContent = currentShelf;
+  document.getElementById('valShelf').classList.remove('empty');
+  document.getElementById('slotShelf').classList.add('filled');
+  const hint = document.getElementById('shelfHint');
+  hint.textContent = t('shelfLockedHint')(currentShelf);
+  hint.style.display = 'block';
+  updateAddBtn();
+}
+
+function manualShelfEntry(){
+  const val = window.prompt(t('manualShelfPrompt'), '');
+  if (val === null) return; // cancelled
+  const trimmed = val.trim();
+  if (!trimmed) return;
+  applyShelfCode(trimmed);
+  if (navigator.vibrate) navigator.vibrate(80);
+  playScanSuccessSound();
+}
+
 function onScanSuccess(text){
   if (scanTarget === 'shelf'){
-    currentShelf = text;
-    document.getElementById('valShelf').textContent = text;
-    document.getElementById('valShelf').classList.remove('empty');
-    document.getElementById('slotShelf').classList.add('filled');
-    const hint = document.getElementById('shelfHint');
-    hint.textContent = t('shelfLockedHint')(text);
-    hint.style.display = 'block';
+    applyShelfCode(text);
   } else {
-    currentItem = text;
-    const foundName = itemLookup[text] || '';
-    currentItemName = foundName || (itemLookupLoaded ? 'Not Found' : 'Not Connected');
-    document.getElementById('valItem').textContent = text;
-    document.getElementById('valItem').classList.remove('empty');
-    document.getElementById('slotItem').classList.add('filled');
-    const nameEl = document.getElementById('valItemName');
-    nameEl.textContent = currentItemName;
-    nameEl.style.display = 'block';
+    applyItemCode(text);
   }
   if (navigator.vibrate) navigator.vibrate(80);
   playScanSuccessSound();
