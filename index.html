@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>سكانر المستودع</title>
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0E1420">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WH Scanner">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<style>
+  :root{
+    --bg: #0E1420;
+    --surface: #161D2C;
+    --surface-2: #1E2637;
+    --border: #2A3245;
+    --amber: #E8A33D;
+    --amber-dim: #B87F2A;
+    --mint: #3DDC97;
+    --red: #E8615D;
+    --text: #EDEFF3;
+    --muted: #8B93A7;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Tajawal',sans-serif; height:100%; overscroll-behavior:none; }
+  h1,h2,h3,.disp{ font-family:'Cairo',sans-serif; }
+
+  .app{ max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding-bottom:24px; }
+
+  /* Sticky header: brand row + actions row together */
+  .header-wrap{ position:sticky; top:0; z-index:20; background:linear-gradient(180deg, var(--bg) 78%, rgba(14,20,32,0)); padding-bottom:6px; }
+  .topbar{ padding:18px 18px 10px; display:flex; align-items:center; gap:12px; }
+  .mark{ display:flex; align-items:flex-end; gap:2px; height:30px; }
+  .mark i{ display:block; width:3px; background:var(--amber); border-radius:1px; animation: barpulse 1.8s ease-in-out infinite; }
+  .mark i:nth-child(1){ height:60%; animation-delay:0s; }
+  .mark i:nth-child(2){ height:100%; animation-delay:.15s; background:var(--text);}
+  .mark i:nth-child(3){ height:40%; animation-delay:.3s; }
+  .mark i:nth-child(4){ height:80%; animation-delay:.45s; background:var(--text);}
+  .mark i:nth-child(5){ height:55%; animation-delay:.6s; }
+  .mark i:nth-child(6){ height:90%; animation-delay:.75s; background:var(--amber);}
+  @keyframes barpulse{ 0%,100%{ transform:scaleY(1); opacity:.85 } 50%{ transform:scaleY(.55); opacity:1 } }
+  .brand{ flex:1; }
+  .brand h1{ margin:0; font-size:19px; font-weight:800; letter-spacing:.2px; }
+  .brand p{ margin:0; font-size:11px; color:var(--muted); }
+  .net-status{ display:flex; align-items:center; gap:5px; margin-top:3px !important; font-size:10.5px; color:var(--mint) !important; }
+  .net-dot{ width:7px; height:7px; border-radius:50%; background:var(--mint); flex-shrink:0; box-shadow:0 0 5px var(--mint); }
+  .net-status.offline{ color:var(--red) !important; }
+  .net-status.offline .net-dot{ background:var(--red); box-shadow:0 0 5px var(--red); }
+  .gear{ width:38px; height:38px; border-radius:11px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; flex-shrink:0; }
+  .lang-toggle{ font-family:'Cairo'; font-weight:800; font-size:12px; color:var(--amber); }
+  html[dir="ltr"] body, body[dir="ltr"]{ direction:ltr; }
+  body[dir="ltr"] .modal-top button{ }
+
+  .content{ padding:4px 18px 0; display:flex; flex-direction:column; gap:14px; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; }
+  .card + .card{ margin-top:0; }
+  .card h3{ margin:0 0 12px; font-size:14px; color:var(--muted); font-weight:700; display:flex; align-items:center; gap:8px; }
+  .card h3 .n{ width:20px; height:20px; border-radius:6px; background:var(--surface-2); color:var(--text); font-size:11px; display:flex; align-items:center; justify-content:center; font-family:'Cairo'; }
+
+  label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+  input[type=text], input[type=email]{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    border-radius:11px; padding:12px 13px; font-size:14.5px; font-family:'Tajawal'; outline:none;
+  }
+  input:focus{ border-color:var(--amber); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field{ margin-bottom:12px; }
+  .field:last-child{ margin-bottom:0; }
+
+  /* Scan slots */
+  .slots{ display:flex; flex-direction:column; gap:10px; }
+  .slot{ display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface-2); border:1px dashed var(--border); border-radius:14px; padding:12px 14px; position:relative; }
+  .slot.filled{ border-style:solid; border-color:var(--mint); }
+  .slot.shelf-slot{ border-color:var(--amber); }
+  .slot.shelf-slot.filled{ background:linear-gradient(90deg, rgba(232,163,61,.10), var(--surface-2)); }
+  .slot .txt{ flex:1; min-width:0; }
+  .slot .lbl{ font-size:11px; color:var(--muted); margin-bottom:4px; }
+  .slot .val{ font-family:'Cairo'; font-weight:800; font-size:15px; word-break:break-all; min-height:20px; }
+  .slot .val.empty{ color:var(--muted); font-weight:500; font-size:12px; font-family:'Tajawal'; }
+  .slot .item-name{ font-size:11.5px; color:var(--mint); margin-top:3px; }
+  .scanbtn{ flex-shrink:0; border:none; border-radius:10px; padding:10px 16px; font-family:'Cairo'; font-weight:700; font-size:12.5px; background:var(--amber); color:#1a1204; white-space:nowrap; }
+
+  .addbtn{ width:100%; border:none; border-radius:13px; padding:14px; font-family:'Cairo'; font-weight:800; font-size:15px; background:var(--mint); color:#062018; opacity:.4; pointer-events:none; transition:.2s; }
+  .addbtn.ready{ opacity:1; pointer-events:auto; }
+  .hint-note{ font-size:11.5px; color:var(--mint); text-align:center; margin-top:10px; }
+
+  /* Entries table */
+  .entry{ display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--border); }
+  .entry:last-child{ border-bottom:none; }
+  .entry .idx{ font-family:'Cairo'; font-weight:800; color:var(--amber); font-size:13px; width:20px; }
+  .entry .info{ flex:1; min-width:0; }
+  .entry .codes{ font-family:'Cairo'; font-weight:700; font-size:13px; }
+  .entry .meta{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .entry .del{ background:none; border:none; color:var(--red); font-size:18px; padding:4px 8px; }
+  .empty-state{ text-align:center; padding:22px 10px; color:var(--muted); font-size:13px; }
+
+  .topactions{ display:flex; gap:10px; padding:0 18px; }
+  .abtn{ flex:1; border:none; border-radius:13px; padding:11px 8px; font-family:'Cairo'; font-weight:800; font-size:12.5px; display:flex; align-items:center; justify-content:center; gap:7px; }
+  .abtn .ico{ font-size:15px; }
+  .abtn .lbls{ display:flex; flex-direction:column; align-items:flex-start; line-height:1.15; }
+  .abtn small{ font-family:'Tajawal'; font-weight:400; font-size:9.5px; opacity:.75; }
+  .abtn.csv{ background:var(--amber); color:#1a1204; }
+  .abtn.send{ background:var(--amber); color:#1a1204; }
+
+  /* Camera modal */
+  .modal{ position:fixed; inset:0; background:#000; z-index:100; display:none; flex-direction:column; }
+  .modal.open{ display:flex; }
+  .modal-top{ padding:16px 18px; display:flex; align-items:center; justify-content:space-between; color:#fff; font-family:'Cairo'; font-weight:700; }
+  .modal-top button{ background:rgba(255,255,255,.12); border:none; color:#fff; width:34px; height:34px; border-radius:10px; font-size:16px; }
+  #reader{ flex:1; position:relative; }
+  #reader video, #reader img, #reader canvas{ object-fit:cover !important; }
+  .scan-frame{ position:absolute; inset:0; pointer-events:none; z-index:5; display:flex; align-items:center; justify-content:center; }
+  .frame-box{ width:72%; aspect-ratio:1; position:relative; }
+  .corner{ position:absolute; width:30px; height:30px; border:3px solid var(--amber); }
+  .corner.tl{ top:0; right:0; border-bottom:none; border-left:none; border-radius:8px 0 0 0; }
+  .corner.tr{ top:0; left:0; border-bottom:none; border-right:none; border-radius:0 8px 0 0; }
+  .corner.bl{ bottom:0; right:0; border-top:none; border-left:none; border-radius:0 0 0 8px; }
+  .corner.br{ bottom:0; left:0; border-top:none; border-right:none; border-radius:0 0 8px 0; }
+  .laser{ position:absolute; right:4px; left:4px; height:2px; background:var(--amber); box-shadow:0 0 8px var(--amber); animation: sweep 1.7s ease-in-out infinite; }
+  @keyframes sweep{ 0%{ top:6%; } 50%{ top:92%; } 100%{ top:6%; } }
+  .modal-hint{ color:var(--muted); text-align:center; padding:16px; font-size:13px; }
+
+  /* Toast */
+  .toast{ position:fixed; bottom:96px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:11px 18px; border-radius:12px; font-size:13px; z-index:200; opacity:0; transition:.25s; pointer-events:none; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* Settings sheet */
+  .sheet-bg{ position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:90; display:none; }
+  .sheet-bg.open{ display:block; }
+  .sheet{ position:fixed; left:0; right:0; bottom:-100%; z-index:91; background:var(--surface); border-radius:20px 20px 0 0; padding:20px 18px 26px; max-width:520px; margin:0 auto; transition:bottom .28s ease; border:1px solid var(--border); }
+  .sheet.open{ bottom:0; }
+  .sheet-handle{ width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+  .sheet h3{ margin:0 0 14px; font-family:'Cairo'; }
+  .close-sheet{ width:100%; margin-top:14px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:12px; padding:12px; font-family:'Cairo'; font-weight:700; }
+
+  .credit{ text-align:center; padding:6px 0 4px; font-size:11px; color:var(--muted); letter-spacing:.3px; }
+  .credit b{ color:var(--amber); font-family:'Cairo'; font-weight:800; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header-wrap">
+    <div class="topbar">
+      <div class="mark"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="brand">
+        <h1 data-i18n="title">سكانر المستودع</h1>
+        <p data-i18n="subtitle">مسح الرف والصنف · تسجيل فوري</p>
+        <p class="net-status" id="netStatus"><span class="net-dot"></span><span id="netStatusText">Online</span></p>
+      </div>
+      <button class="gear" id="soundBtn" onclick="toggleSound()">🔊</button>
+      <button class="gear lang-toggle" id="langBtn" onclick="toggleLang()">AR</button>
+    </div>
+    <div class="topactions">
+      <button class="gear" id="resetBtn" onclick="confirmReset()">🗑</button>
+      <button class="abtn csv" onclick="exportExcel()"><span class="ico">📊</span><span class="lbls"><span data-i18n="exportBtn">تصدير Excel</span><small data-i18n="exportSub">ملف Excel</small></span></button>
+      <button class="abtn send" onclick="shareFile()"><span class="ico">📤</span><span class="lbls"><span data-i18n="sendBtn">مشاركة</span><small data-i18n="sendSub">اختر التطبيق</small></span></button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="card">
+      <h3><span class="n">1</span> <span data-i18n="sectionOrder">بيانات أمر التوريد</span></h3>
+      <div class="field">
+        <label data-i18n="orderNoLabel">رقم أمر التوريد</label>
+        <input type="text" id="orderNo" data-i18n-ph="orderNoPh" placeholder="مثال: PO-2026-014">
+      </div>
+      <div class="field">
+        <label data-i18n="responsibleLabel">اسم المسؤول</label>
+        <input type="text" id="responsible" data-i18n-ph="responsiblePh" placeholder="اسم الموظف المسؤول">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="n">2</span> <span data-i18n="sectionScan">مسح الأكواد</span></h3>
+      <div class="slots">
+        <div class="slot shelf-slot" id="slotShelf">
+          <div class="txt">
+            <div class="lbl" data-i18n="shelfLabel">كود الرف</div>
+            <div class="val empty" id="valShelf" data-i18n="notScanned">لم يُمسح بعد</div>
+          </div>
+          <button class="scanbtn" onclick="startScan('shelf')"><span data-i18n="scanShelfBtn">📷 مسح الرف</span></button>
+        </div>
+        <div class="slot" id="slotItem">
+          <div class="txt">
+            <div class="lbl" data-i18n="itemLabel">كود الصنف</div>
+            <div class="val empty" id="valItem" data-i18n="notScanned">لم يُمسح بعد</div>
+            <div class="item-name" id="valItemName" style="display:none;"></div>
+          </div>
+          <button class="scanbtn" onclick="startScan('item')"><span data-i18n="scanItemBtn">📷 مسح الصنف</span></button>
+        </div>
+      </div>
+      <div class="hint-note" id="shelfHint" style="display:none;"></div>
+      <button class="addbtn" id="addBtn" onclick="addEntry()" style="margin-top:14px;"><span data-i18n="addBtn">➕ إضافة السطر</span></button>
+    </div>
+
+    <div class="card">
+      <h3><span class="n">3</span> <span data-i18n="sectionEntries">السجلات المسجّلة</span> (<span id="countLbl">0</span>)</h3>
+      <div id="entriesList">
+        <div class="empty-state" data-i18n="emptyState">لسه مفيش أي أصناف متسجلة في أمر التوريد ده</div>
+      </div>
+    </div>
+
+    <div class="credit">Developed by <b>Sysora</b></div>
+
+  </div>
+</div>
+
+<!-- Camera modal -->
+<div class="modal" id="cameraModal">
+  <div class="modal-top">
+    <span id="scanTitle">مسح كود الرف</span>
+    <button onclick="stopScan()">✕</button>
+  </div>
+  <div id="reader"></div>
+  <div class="scan-frame">
+    <div class="frame-box">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="laser"></div>
+    </div>
+  </div>
+  <div class="modal-hint" data-i18n="scanHint">وجّه الكاميرا نحو الباركود أو كود QR</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- Sound engine (generated tones, no external audio files) ----
+let audioCtx = null;
+let soundEnabled = true;
+try{ soundEnabled = localStorage.getItem('scannerSoundEnabled') !== '0'; }catch(e){}
+
+function ensureAudio(){
+  if (!soundEnabled) return null;
+  if (!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, duration=80, type='sine', volume=0.14, delay=0){
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const start = ctx.currentTime + delay;
+  gain.gain.setValueAtTime(volume, start);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration/1000);
+  osc.start(start);
+  osc.stop(start + duration/1000 + 0.03);
+}
+
+function playClickSound(){ playTone(680, 32, 'square', 0.05); }
+function playScanSuccessSound(){ playTone(880, 90, 'sine', 0.18); playTone(1318, 120, 'sine', 0.16, 0.08); }
+function playAddSound(){ playTone(660, 70, 'sine', 0.15); playTone(990, 110, 'sine', 0.14, 0.06); }
+function playErrorSound(){ playTone(220, 140, 'sawtooth', 0.12); }
+
+function toggleSound(){
+  soundEnabled = !soundEnabled;
+  try{ localStorage.setItem('scannerSoundEnabled', soundEnabled ? '1' : '0'); }catch(e){}
+  document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
+  if (soundEnabled) playClickSound();
+}
+
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if (btn && !btn.classList.contains('no-sound')) playClickSound();
+}, true);
+</script>
+
+<script>
+const i18n = {
+  ar: {
+    dir:'rtl', htmlLang:'ar',
+    title:'سكانر المستودع', subtitle:'مسح الرف والصنف · تسجيل فوري',
+    sectionOrder:'بيانات أمر التوريد', orderNoLabel:'رقم أمر التوريد', orderNoPh:'مثال: PO-2026-014',
+    responsibleLabel:'اسم المسؤول', responsiblePh:'اسم الموظف المسؤول',
+    sectionScan:'مسح الأكواد', shelfLabel:'كود الرف', itemLabel:'كود الصنف', notScanned:'لم يُمسح بعد',
+    scanShelfBtn:'📷 مسح الرف', scanItemBtn:'📷 مسح الصنف', addBtn:'➕ إضافة السطر',
+    sectionEntries:'السجلات المسجّلة', emptyState:'لسه مفيش أي أصناف متسجلة في أمر التوريد ده',
+    exportBtn:'تصدير Excel', exportSub:'ملف Excel', sendBtn:'مشاركة', sendSub:'اختر التطبيق',
+    scanTitleShelf:'مسح كود الرف', scanTitleItem:'مسح كود الصنف', scanHint:'وجّه الكاميرا نحو الباركود أو كود QR',
+    toastNeedOrder:'من فضلك أدخل رقم أمر التوريد واسم المسؤول أولاً', toastAdded:'تم إضافة الصنف ✓',
+    toastNoData:'لا يوجد بيانات لتصديرها بعد', toastExported:'تم تصدير الملف ✓',
+    toastNoDataSend:'لا يوجد بيانات للمشاركة بعد',
+    toastShareGuide:'تم تنزيل الملف ✓ — دوس على إشعار "تم التنزيل" تحت الشاشة واختر "فتح"، وبعدها استخدم زر المشاركة داخل التطبيق اللي هيفتح بيه الملف',
+    toastShareGuide2:'تم فتح شاشة المشاركة ✓',
+    errInsecure:'تعذّر الوصول إلى الكاميرا: الصفحة مفتوحة بدون اتصال آمن (HTTPS). ارفع الملف على استضافة HTTPS (مثل GitHub Pages أو Netlify) وافتحه من هناك.',
+    errDenied:'تم رفض إذن الكاميرا. افتح إعدادات المتصفح وفعّل صلاحية الكاميرا لهذا الموقع.',
+    errNotFound:'لم يتم العثور على كاميرا في هذا الجهاز.',
+    errInUse:'الكاميرا مستخدمة حاليًا من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مجددًا.',
+    errNoApi:'المتصفح لا يدعم الوصول للكاميرا في هذه الصفحة.',
+    errGeneric:'تعذّر تشغيل الكاميرا. تأكد من صلاحية الوصول.',
+    csvHeaders:['Order Number','Shelf Code','Item Code','Item Name','Person Name','Date','Time'],
+    entryCodes:(s,i,n)=>`رف: ${s} · صنف: ${i}${n ? ' — ' + n : ''}`,
+    shareTitle:(o)=>`أمر توريد ${o}`, shareText:(o)=>`سجل أمر التوريد رقم ${o}`,
+    fileNamePrefix:'أمر_توريد_', noOrderFallback:'بدون_رقم', langBtnLabel:'EN',
+    shelfLockedHint:(s)=>`✓ الرف "${s}" محفوظ — امسح كود الصنف التالي مباشرة لإضافته لنفس الرف`
+  },
+  en: {
+    dir:'ltr', htmlLang:'en',
+    title:'Warehouse Scanner', subtitle:'Shelf & item scan · instant logging',
+    sectionOrder:'Supply Order Info', orderNoLabel:'Supply Order Number', orderNoPh:'e.g. PO-2026-014',
+    responsibleLabel:'Responsible Name', responsiblePh:'Employee in charge',
+    sectionScan:'Scan Codes', shelfLabel:'Shelf Code', itemLabel:'Item Code', notScanned:'Not scanned yet',
+    scanShelfBtn:'📷 Scan Shelf', scanItemBtn:'📷 Scan Item', addBtn:'➕ Add Row',
+    sectionEntries:'Logged Entries', emptyState:'No items logged for this supply order yet',
+    exportBtn:'Export Excel', exportSub:'Excel file', sendBtn:'Share', sendSub:'Choose an app',
+    scanTitleShelf:'Scan Shelf Code', scanTitleItem:'Scan Item Code', scanHint:'Point the camera at the barcode or QR code',
+    toastNeedOrder:'Please enter the order number and responsible name first', toastAdded:'Item added ✓',
+    toastNoData:'No data to export yet', toastExported:'File exported ✓',
+    toastNoDataSend:'No data to share yet',
+    toastShareGuide:'File downloaded ✓ — tap the "Downloaded" notification below and choose "Open", then use that app\'s own Share button',
+    toastShareGuide2:'Share sheet opened ✓',
+    errInsecure:'Camera blocked: this page is open without a secure (HTTPS) connection. Host the file on HTTPS (e.g. GitHub Pages or Netlify) and open it from there.',
+    errDenied:'Camera permission was denied. Open your browser settings and allow camera access for this site.',
+    errNotFound:'No camera was found on this device.',
+    errInUse:'The camera is currently used by another app. Close other apps and try again.',
+    errNoApi:'This browser does not support camera access on this page.',
+    errGeneric:'Could not start the camera. Please check camera permission.',
+    csvHeaders:['Order Number','Shelf Code','Item Code','Item Name','Person Name','Date','Time'],
+    entryCodes:(s,i,n)=>`Shelf: ${s} · Item: ${i}${n ? ' — ' + n : ''}`,
+    shareTitle:(o)=>`Supply Order ${o}`, shareText:(o)=>`Supply order log ${o}`,
+    fileNamePrefix:'supply_order_', noOrderFallback:'no_number', langBtnLabel:'AR',
+    shelfLockedHint:(s)=>`✓ Shelf "${s}" is locked in — scan the next item code to add it under the same shelf`
+  }
+};
+
+let lang = 'en';
+let entries = [];
+let scanTarget = null;
+let html5QrCode = null;
+let currentShelf = '';
+let currentItem = '';
+let currentItemName = '';
+let itemLookup = {};
+let itemLookupLoaded = false;
+
+// EDIT THIS URL to point at your own items.csv on GitHub (raw file link).
+// Format: two columns, ItemCode,ItemName — one item per line.
+const ITEM_LOOKUP_URL = 'https://raw.githubusercontent.com/sysorapro/warehouse-scanner-/main/items.csv';
+
+function parseLookupCSV(text){
+  const map = {};
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  for (let i = 0; i < lines.length; i++){
+    if (i === 0 && /itemcode/i.test(lines[i])) continue; // skip header row
+    const parts = lines[i].split(',');
+    if (parts.length < 2) continue;
+    const code = parts[0].trim().replace(/^"|"$/g, '');
+    const name = parts.slice(1).join(',').trim().replace(/^"|"$/g, '');
+    if (code) map[code] = name;
+  }
+  return map;
+}
+
+async function loadItemLookup(){
+  try{
+    const res = await fetch(ITEM_LOOKUP_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    itemLookup = parseLookupCSV(text);
+    itemLookupLoaded = true;
+  }catch(e){
+    itemLookupLoaded = false; // offline or file missing — item names just won't auto-fill
+  }
+}
+
+function t(key){ return i18n[lang][key]; }
+
+function applyLang(){
+  const dict = i18n[lang];
+  document.documentElement.setAttribute('lang', dict.htmlLang);
+  document.documentElement.setAttribute('dir', dict.dir);
+  document.body.setAttribute('dir', dict.dir);
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-ph');
+    if (dict[key] !== undefined) el.placeholder = dict[key];
+  });
+  document.getElementById('langBtn').textContent = dict.langBtnLabel;
+  document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
+  if (currentShelf){
+    document.getElementById('shelfHint').textContent = t('shelfLockedHint')(currentShelf);
+  }
+  if (typeof updateNetStatus === 'function') updateNetStatus();
+  renderEntries();
+}
+
+function toggleLang(){
+  lang = (lang === 'ar') ? 'en' : 'ar';
+  applyLang();
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  const duration = Math.min(6000, Math.max(2200, msg.length * 60));
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=> t.classList.remove('show'), duration);
+}
+
+async function startScan(target){
+  scanTarget = target;
+  document.getElementById('scanTitle').textContent = target === 'shelf' ? t('scanTitleShelf') : t('scanTitleItem');
+
+  // If the item-name list failed to load earlier (e.g. no internet at startup),
+  // quietly try again in the background — never blocks scanning either way.
+  if (target === 'item' && !itemLookupLoaded){
+    loadItemLookup();
+  }
+
+  if (typeof Html5Qrcode === 'undefined'){
+    toast(lang === 'ar' ? 'مكتبة المسح لسه بتتحمّل، حاول تاني بعد ثانيتين' : 'Scanner library still loading, try again in a moment');
+    return;
+  }
+
+  // 1) Secure-context check first — this is the #1 real-world cause of camera failures
+  // when a file is opened directly (file://) instead of via https.
+  if (!window.isSecureContext){
+    playErrorSound();
+    toast(t('errInsecure'));
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    playErrorSound();
+    toast(t('errNoApi'));
+    return;
+  }
+
+  // 2) Explicitly request permission first so we can show a precise reason on failure,
+  // instead of a generic message from the scanning library.
+  try{
+    const testStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    testStream.getTracks().forEach(tr => tr.stop());
+  }catch(err){
+    stopScan();
+    playErrorSound();
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'){
+      toast(t('errDenied'));
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError'){
+      toast(t('errNotFound'));
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError'){
+      toast(t('errInUse'));
+    } else if (err.name === 'SecurityError'){
+      toast(t('errInsecure'));
+    } else {
+      toast(t('errGeneric'));
+    }
+    return;
+  }
+
+  // 3) Permission confirmed — now open the modal and start the actual scanner.
+  document.getElementById('cameraModal').classList.add('open');
+  html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 12, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 };
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => { onScanSuccess(decodedText); },
+    (err) => { /* ignore per-frame no-match */ }
+  ).then(()=>{
+    setTorch(true); // turn the flashlight on while scanning, if the device supports it
+  }).catch((err)=>{
+    toast(t('errGeneric'));
+    stopScan();
+  });
+}
+
+function setTorch(on){
+  try{
+    if (!html5QrCode) return;
+    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+    const torchFeature = capabilities && capabilities.torchFeature && capabilities.torchFeature();
+    if (torchFeature && torchFeature.isSupported && torchFeature.isSupported()){
+      torchFeature.apply(on);
+    }
+  }catch(e){ /* torch not supported on this device/browser — ignore silently */ }
+}
+
+function onScanSuccess(text){
+  if (scanTarget === 'shelf'){
+    currentShelf = text;
+    document.getElementById('valShelf').textContent = text;
+    document.getElementById('valShelf').classList.remove('empty');
+    document.getElementById('slotShelf').classList.add('filled');
+    const hint = document.getElementById('shelfHint');
+    hint.textContent = t('shelfLockedHint')(text);
+    hint.style.display = 'block';
+  } else {
+    currentItem = text;
+    const foundName = itemLookup[text] || '';
+    currentItemName = foundName || (itemLookupLoaded ? 'Not Found' : 'Not Connected');
+    document.getElementById('valItem').textContent = text;
+    document.getElementById('valItem').classList.remove('empty');
+    document.getElementById('slotItem').classList.add('filled');
+    const nameEl = document.getElementById('valItemName');
+    nameEl.textContent = currentItemName;
+    nameEl.style.display = 'block';
+  }
+  if (navigator.vibrate) navigator.vibrate(80);
+  playScanSuccessSound();
+  stopScan();
+  updateAddBtn();
+}
+
+function stopScan(){
+  document.getElementById('cameraModal').classList.remove('open');
+  if (html5QrCode){
+    setTorch(false);
+    html5QrCode.stop().then(()=>{ html5QrCode.clear(); }).catch(()=>{});
+  }
+}
+
+function updateAddBtn(){
+  const btn = document.getElementById('addBtn');
+  if (currentShelf && currentItem) btn.classList.add('ready');
+  else btn.classList.remove('ready');
+}
+
+function addEntry(){
+  const orderNo = document.getElementById('orderNo').value.trim();
+  const responsible = document.getElementById('responsible').value.trim();
+  if (!orderNo || !responsible){
+    toast(t('toastNeedOrder'));
+    return;
+  }
+  if (!currentShelf || !currentItem) return;
+
+  const now = new Date();
+  const date = now.toLocaleDateString('en-GB');
+  const time = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  entries.push({ orderNo, shelf: currentShelf, item: currentItem, itemName: currentItemName, responsible, date, time });
+
+  // Keep the shelf code locked in — only clear the item slot so the next
+  // scan can add another item under the same shelf without rescanning it.
+  currentItem = '';
+  currentItemName = '';
+  document.getElementById('valItem').textContent = t('notScanned');
+  document.getElementById('valItem').classList.add('empty');
+  document.getElementById('slotItem').classList.remove('filled');
+  document.getElementById('valItemName').style.display = 'none';
+  document.getElementById('shelfHint').textContent = t('shelfLockedHint')(currentShelf);
+  updateAddBtn();
+
+  renderEntries();
+  playAddSound();
+  toast(t('toastAdded'));
+}
+
+function renderEntries(){
+  document.getElementById('countLbl').textContent = entries.length;
+  const list = document.getElementById('entriesList');
+  if (entries.length === 0){
+    list.innerHTML = `<div class="empty-state">${t('emptyState')}</div>`;
+    return;
+  }
+  list.innerHTML = entries.map((e, i) => `
+    <div class="entry">
+      <div class="idx">${i+1}</div>
+      <div class="info">
+        <div class="codes">${escapeHtml(t('entryCodes')(e.shelf, e.item, e.itemName))}</div>
+        <div class="meta">${e.date} · ${e.time} · ${escapeHtml(e.responsible)}</div>
+      </div>
+      <button class="del" onclick="deleteEntry(${i})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function deleteEntry(i){
+  entries.splice(i, 1);
+  renderEntries();
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function buildWorkbookAOA(){
+  const header = t('csvHeaders');
+  const rows = entries.map(e => [e.orderNo, e.shelf, e.item, e.itemName || '', e.responsible, e.date, e.time]);
+  return [header, ...rows];
+}
+
+function buildXLSXBlob(){
+  const aoa = buildWorkbookAOA();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:16},{wch:16},{wch:16},{wch:22},{wch:20},{wch:12},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Supply Order');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+function buildCSVBlob(){
+  const aoa = buildWorkbookAOA();
+  const csv = aoa.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  return new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+}
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function getFileName(ext){
+  const rawOrder = document.getElementById('orderNo').value.trim() || 'NoOrderNumber';
+  const safeOrder = rawOrder.replace(/[^a-zA-Z0-9\-_]+/g, '_').replace(/^_+|_+$/g,'') || 'NoOrderNumber';
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+  const timeStr = `${pad2(now.getHours())}${pad2(now.getMinutes())}`;
+  return `SupplyOrder_${safeOrder}_${dateStr}_${timeStr}.${ext || 'xlsx'}`;
+}
+
+function exportExcel(){
+  if (entries.length === 0){ toast(t('toastNoData')); return; }
+  if (typeof XLSX === 'undefined'){
+    toast(lang === 'ar' ? 'مكتبة Excel لسه بتتحمّل، حاول تاني بعد ثانيتين' : 'Excel library still loading, try again in a moment');
+    return;
+  }
+  const blob = buildXLSXBlob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = getFileName('xlsx');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast(t('toastExported'));
+}
+
+async function shareFile(){
+  if (entries.length === 0){ toast(t('toastNoDataSend')); return; }
+
+  try{
+    const orderNo = document.getElementById('orderNo').value.trim() || '—';
+    // Share as CSV: some Android browsers reject sharing .xlsx files outright
+    // (confirmed on-device), while .csv shares reliably and still opens fine
+    // in Excel/Sheets. The "Export Excel" button still produces a real .xlsx.
+    const blob = buildCSVBlob();
+    const fileName = getFileName('csv');
+
+    if (typeof navigator.share === 'function'){
+      try{
+        const file = new File([blob], fileName, { type: 'text/csv' });
+        await navigator.share({
+          files: [file],
+          title: t('shareTitle')(orderNo),
+          text: t('shareText')(orderNo)
+        });
+        toast(t('toastShareGuide2'));
+        playAddSound();
+        return;
+      }catch(shareErr){
+        if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
+        // any other failure: fall through to the guaranteed download below
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    playAddSound();
+    toast(t('toastShareGuide'));
+  }catch(err){
+    toast((lang === 'ar' ? 'تعذّر تنزيل الملف: ' : 'Could not download file: ') + (err && err.message ? err.message : String(err)));
+  }
+}
+
+function updateNetStatus(){
+  const online = navigator.onLine;
+  const el = document.getElementById('netStatus');
+  const txt = document.getElementById('netStatusText');
+  el.classList.toggle('offline', !online);
+  txt.textContent = online
+    ? (lang === 'ar' ? 'متصل' : 'Online')
+    : (lang === 'ar' ? 'غير متصل' : 'Offline');
+}
+window.addEventListener('online', updateNetStatus);
+window.addEventListener('offline', updateNetStatus);
+
+function confirmReset(){
+  const msg = lang === 'ar'
+    ? 'هل أنت متأكد؟ ده هيمسح كل البيانات المسجّلة (السجلات، الأكواد، رقم الأمر) عشان تبدأ أمر توريد جديد. الإجراء ده لا يمكن التراجع عنه.'
+    : 'Are you sure? This will clear all logged entries, scanned codes, and the order number to start a new supply order. This cannot be undone.';
+  if (!window.confirm(msg)) return;
+
+  entries = [];
+  currentShelf = '';
+  currentItem = '';
+  currentItemName = '';
+
+  document.getElementById('orderNo').value = '';
+  document.getElementById('responsible').value = '';
+
+  document.getElementById('valShelf').textContent = t('notScanned');
+  document.getElementById('valShelf').classList.add('empty');
+  document.getElementById('slotShelf').classList.remove('filled');
+
+  document.getElementById('valItem').textContent = t('notScanned');
+  document.getElementById('valItem').classList.add('empty');
+  document.getElementById('slotItem').classList.remove('filled');
+  document.getElementById('valItemName').style.display = 'none';
+
+  document.getElementById('shelfHint').style.display = 'none';
+
+  updateAddBtn();
+  renderEntries();
+  playErrorSound();
+  toast(lang === 'ar' ? 'تم مسح كل البيانات ✓' : 'Everything cleared ✓');
+}
+
+applyLang();
+loadItemLookup();
+updateNetStatus();
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* offline caching is a bonus, not required */ });
+  });
+}
+</script>
+</body>
+</html>
