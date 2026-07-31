@@ -439,7 +439,7 @@ function updateLastSyncDisplay(){
   const d = new Date(iso);
   const datePart = d.toLocaleDateString('en-GB');
   const timePart = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-  el.textContent = (lang === 'ar' ? '· آخر تحديث ' : '·L.Update ') + datePart + ' ' + timePart;
+  el.textContent = (lang === 'ar' ? '· آخر تحديث ' : '· Last update ') + datePart + ' ' + timePart;
 }
 
 let itemLookup = {};
@@ -494,7 +494,7 @@ async function loadItemLookup(){
   // normal HTTP cache (raw.githubusercontent.com sends short-lived
   // Cache-Control headers) so quick repeat calls don't even hit the network.
   try{
-    const res = await fetch(ITEM_LOOKUP_URL);
+    const res = await fetch(ITEM_LOOKUP_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     itemLookup = parseLookupCSV(text);
@@ -560,7 +560,7 @@ async function loadGroupLookup(){
 
   // 2) Try to refresh from GitHub in the background (silent if it fails).
   try{
-    const res = await fetch(GROUP_LOOKUP_URL);
+    const res = await fetch(GROUP_LOOKUP_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     groupList = parseGroupCSV(text);
@@ -609,7 +609,7 @@ async function loadShelfLookup(){
   // 2) Try to refresh from GitHub in the background (silent if it fails —
   // the cached copy from step 1, if any, still stands).
   try{
-    const res = await fetch(SHELF_LOOKUP_URL);
+    const res = await fetch(SHELF_LOOKUP_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     shelfLookup = parseShelfCSV(text);
