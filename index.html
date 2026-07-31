@@ -439,7 +439,7 @@ function updateLastSyncDisplay(){
   const d = new Date(iso);
   const datePart = d.toLocaleDateString('en-GB');
   const timePart = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-  el.textContent = (lang === 'ar' ? '· آخر تحديث ' : '· Last update ') + datePart + ' ' + timePart;
+  el.textContent = (lang === 'ar' ? '· آخر تحديث ' : '·L.Update ') + datePart + ' ' + timePart;
 }
 
 let itemLookup = {};
