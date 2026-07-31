@@ -1,10 +1,12 @@
-const CACHE_NAME = 'warehouse-scanner-v2';
+const CACHE_NAME = 'warehouse-scanner-v3';
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './html5-qrcode.min.js',
+  './xlsx.full.min.js'
 ];
 
 self.addEventListener('install', (event) => {

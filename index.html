@@ -1059,7 +1059,6 @@ function saveDraft(){
       currentShelf
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    markSynced();
   }catch(e){ /* storage full or unavailable — nothing more we can do */ }
 }
 
