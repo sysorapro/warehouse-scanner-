@@ -28,6 +28,18 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const isLookupData = event.request.url.includes('raw.githubusercontent.com/sysorapro/warehouse-scanner-/');
+
+  if (isLookupData) {
+    // Network-only, no cache involved at all: these are the live item/group/
+    // shelf CSVs. The page keeps its own localStorage-based offline copy and
+    // "last successful update" timestamp — if the Service Worker served a
+    // cached response here instead of hitting the real network, the app
+    // would think it just synced successfully even while fully offline.
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   const isPage = event.request.mode === 'navigate' || event.request.destination === 'document';
 
   if (isPage) {
