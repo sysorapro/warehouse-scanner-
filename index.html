@@ -193,6 +193,15 @@
   })();
 </script>
 
+<div id="firstRunGate" class="splash" style="display:none; z-index:10000; gap:18px; padding:0 32px; text-align:center;">
+  <div class="mark splash-mark" style="height:70px; gap:8px;"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="splash-title" id="gateTitle" style="font-size:17px;">Internet connection required</div>
+  <div class="splash-credit" id="gateSubtitle" style="font-size:12.5px; max-width:320px; line-height:1.6; margin-top:-2px;">
+    This device needs to download the reference lists once before it can be used. Connect to the internet and try again.
+  </div>
+  <button id="gateRetryBtn" onclick="retryFirstRunGate()" style="margin-top:10px; border:none; border-radius:12px; padding:12px 28px; font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; background:var(--amber); color:#1a1204;">Retry</button>
+</div>
+
 
 <div class="app">
   <div class="header-wrap">
@@ -376,7 +385,8 @@ const i18n = {
     entryCodes:(s,i,n)=>`رف: ${s} · صنف: ${i}${n ? ' — ' + n : ''}`,
     shareTitle:(o)=>`أمر توريد ${o}`, shareText:(o)=>`سجل أمر التوريد رقم ${o}`,
     fileNamePrefix:'أمر_توريد_', noOrderFallback:'بدون_رقم', langBtnLabel:'EN',
-    shelfLockedHint:(s)=>`✓ الرف "${s}" محفوظ — امسح كود الصنف التالي مباشرة لإضافته لنفس الرف`
+    shelfLockedHint:(s)=>`✓ الرف "${s}" محفوظ — امسح كود الصنف التالي مباشرة لإضافته لنفس الرف`,
+    gateTitle:'محتاج اتصال بالإنترنت', gateSubtitle:'الجهاز ده محتاج يجيب قوائم الأرفف والأصناف مرة واحدة قبل ما تقدر تستخدم التطبيق. وصّل بالإنترنت وجرّب تاني.', gateRetry:'حاول تاني'
   },
   en: {
     dir:'ltr', htmlLang:'en',
@@ -406,7 +416,8 @@ const i18n = {
     entryCodes:(s,i,n)=>`Shelf: ${s} · Item: ${i}${n ? ' — ' + n : ''}`,
     shareTitle:(o)=>`Supply Order ${o}`, shareText:(o)=>`Supply order log ${o}`,
     fileNamePrefix:'supply_order_', noOrderFallback:'no_number', langBtnLabel:'AR',
-    shelfLockedHint:(s)=>`✓ Shelf "${s}" is locked in — scan the next item code to add it under the same shelf`
+    shelfLockedHint:(s)=>`✓ Shelf "${s}" is locked in — scan the next item code to add it under the same shelf`,
+    gateTitle:'Internet connection required', gateSubtitle:'This device needs to download the shelf and item reference lists once before it can be used. Connect to the internet and try again.', gateRetry:'Retry'
   }
 };
 
@@ -439,7 +450,7 @@ function updateLastSyncDisplay(){
   const d = new Date(iso);
   const datePart = d.toLocaleDateString('en-GB');
   const timePart = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-  el.textContent = (lang === 'ar' ? '· آخر تحديث ' : '·L.Update ') + datePart + ' ' + timePart;
+  el.textContent = (lang === 'ar' ? '· آخر تحديث ' : '· Last update ') + datePart + ' ' + timePart;
 }
 
 let itemLookup = {};
@@ -465,17 +476,70 @@ function parseLookupCSV(text){
 }
 
 // Shared throttle so repeated triggers (scan retries, focus events, the
-// hourly timer, coming back online) can't hammer GitHub with requests —
-// raw.githubusercontent.com now rate-limits unauthenticated traffic per IP,
-// and a shared warehouse WiFi means many phones can share one IP.
-const LOOKUP_MIN_INTERVAL_MS = 5 * 60 * 1000; // at most once every 5 minutes per list
-const lastFetchAttempt = { item: 0, group: 0, shelf: 0 };
+// hourly timer, coming back online, AND simply reopening the app) can't
+// hammer GitHub with requests — raw.githubusercontent.com rate-limits
+// unauthenticated traffic per IP, and a shared warehouse WiFi means many
+// phones can share one IP. This is stored in localStorage (not a plain JS
+// variable) specifically so the limit survives the app being closed and
+// reopened — many staff opening/closing the app repeatedly must still only
+// add up to one real request per file every 20 minutes, per device.
+const LOOKUP_MIN_INTERVAL_MS = 20 * 60 * 1000; // at most once every 20 minutes per list, per device
+const THROTTLE_KEY_PREFIX = 'warehouseScannerLastFetch_';
 function throttled(key){
   const now = Date.now();
-  if (now - lastFetchAttempt[key] < LOOKUP_MIN_INTERVAL_MS) return true;
-  lastFetchAttempt[key] = now;
+  let last = 0;
+  try{ last = parseInt(localStorage.getItem(THROTTLE_KEY_PREFIX + key) || '0', 10) || 0; }catch(e){}
+  if (now - last < LOOKUP_MIN_INTERVAL_MS) return true;
+  try{ localStorage.setItem(THROTTLE_KEY_PREFIX + key, String(now)); }catch(e){}
   return false;
 }
+
+function hasAnyCachedLookup(){
+  try{
+    return !!(localStorage.getItem(ITEM_CACHE_KEY) || localStorage.getItem(GROUP_CACHE_KEY) || localStorage.getItem(SHELF_CACHE_KEY));
+  }catch(e){ return false; }
+}
+
+function showFirstRunGate(){
+  const gate = document.getElementById('firstRunGate');
+  document.getElementById('gateTitle').textContent = t('gateTitle');
+  document.getElementById('gateSubtitle').textContent = t('gateSubtitle');
+  document.getElementById('gateRetryBtn').textContent = t('gateRetry');
+  gate.style.display = 'flex';
+}
+
+function hideFirstRunGate(){
+  document.getElementById('firstRunGate').style.display = 'none';
+}
+
+function checkFirstRunGate(){
+  // Only relevant the very first time this device is used (or right after
+  // its storage was cleared) — once anything is cached locally, the app
+  // works offline from then on and this gate never appears again.
+  if (hasAnyCachedLookup()) return;
+  if (navigator.onLine) return; // online: the normal loaders already fetch on their own
+  showFirstRunGate();
+}
+
+async function retryFirstRunGate(){
+  if (!navigator.onLine){
+    toast(lang === 'ar' ? 'لسه مفيش اتصال بالإنترنت' : 'Still no internet connection');
+    return;
+  }
+  await Promise.all([loadItemLookup(), loadGroupLookup(), loadShelfLookup()]);
+  if (hasAnyCachedLookup()){
+    hideFirstRunGate();
+  } else {
+    toast(lang === 'ar' ? 'تعذّر التحميل، حاول تاني' : 'Could not load, please try again');
+  }
+}
+
+window.addEventListener('online', () => {
+  const gate = document.getElementById('firstRunGate');
+  if (gate && gate.style.display !== 'none'){
+    retryFirstRunGate();
+  }
+});
 
 async function loadItemLookup(){
   // 1) Show the cached list instantly (works fully offline once cached once).
@@ -1335,6 +1399,7 @@ function confirmReset(){
 
 applyLang();
 offerDraftRestore();
+checkFirstRunGate();
 loadItemLookup();
 loadGroupLookup();
 loadShelfLookup();
