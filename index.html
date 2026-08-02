@@ -1320,7 +1320,7 @@ function getFileName(ext){
   return `SupplyOrder_${safeOrder}_${dateStr}_${timeStr}.${ext || 'xlsx'}`;
 }
 
-async function exportExcel(){
+function exportExcel(){
   if (entries.length === 0){ toast(t('toastNoData')); return; }
   if (typeof XLSX === 'undefined'){
     toast(lang === 'ar' ? 'مكتبة Excel لسه بتتحمّل، حاول تاني بعد ثانيتين' : 'Excel library still loading, try again in a moment');
@@ -1328,16 +1328,12 @@ async function exportExcel(){
   }
   const blob = buildXLSXBlob();
   const url = URL.createObjectURL(blob);
+  const fileName = getFileName('xlsx');
   const a = document.createElement('a');
-  a.href = url; a.download = getFileName('xlsx');
+  a.href = url; a.download = fileName;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast(t('toastExported'));
-
-  const wantsView = await customConfirm(t('askOpenFile'));
-  if (wantsView){
-    toast(t('openFileGuide'));
-  }
+  toast(t('toastExported') + ' Downloads/' + fileName);
 }
 
 async function shareFile(){
