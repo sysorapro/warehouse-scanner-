@@ -300,12 +300,6 @@
 
     <div class="card">
       <h3><span class="n">2</span> <span data-i18n="sectionScan">مسح الأكواد</span></h3>
-      <div class="field">
-        <label data-i18n="groupLabel">المجموعة</label>
-        <select id="groupSelect" onfocus="if(!groupLookupLoaded) loadGroupLookup();" onchange="updateAddBtn(); saveDraft();">
-          <option value="" data-i18n="groupPlaceholder">-- اختر مجموعة --</option>
-        </select>
-      </div>
       <div class="slots">
         <div class="slot shelf-slot" id="slotShelf">
           <div class="txt">
@@ -314,6 +308,12 @@
             <div class="item-name" id="valShelfStatus" style="display:none;"></div>
           </div>
           <button class="scanbtn" onclick="startScan('shelf')"><span data-i18n="scanShelfBtn">📷 مسح الرف</span></button>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label data-i18n="groupLabel">المجموعة</label>
+          <select id="groupSelect" onfocus="if(!groupLookupLoaded) loadGroupLookup();" onchange="updateAddBtn(); saveDraft();">
+            <option value="" data-i18n="groupPlaceholder">-- اختر مجموعة --</option>
+          </select>
         </div>
         <div class="slot" id="slotItem">
           <div class="txt">
@@ -472,7 +472,7 @@ const i18n = {
     errInUse:'الكاميرا مستخدمة حاليًا من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مجددًا.',
     errNoApi:'المتصفح لا يدعم الوصول للكاميرا في هذه الصفحة.',
     errGeneric:'تعذّر تشغيل الكاميرا. تأكد من صلاحية الوصول.',
-    csvHeaders:['Order Number','Group No','Group Name','Shelf Code','Item Code','Item Name','Person Name','Date','Time'],
+    csvHeaders:['Order Number','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time'],
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف',
     menuSound:'الصوت', menuLang:'اللغة', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة',
@@ -513,7 +513,7 @@ const i18n = {
     errInUse:'The camera is currently used by another app. Close other apps and try again.',
     errNoApi:'This browser does not support camera access on this page.',
     errGeneric:'Could not start the camera. Please check camera permission.',
-    csvHeaders:['Order Number','Group No','Group Name','Shelf Code','Item Code','Item Name','Person Name','Date','Time'],
+    csvHeaders:['Order Number','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time'],
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete',
     menuSound:'Sound', menuLang:'Language', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders',
@@ -706,6 +706,9 @@ function parseGroupCSV(text){
   return list;
 }
 
+let pendingGroupFromShelf = ''; // Group No waiting to be applied once groupList finishes loading
+let pendingGroupFromShelfCode = ''; // which shelf code requested it (staleness guard)
+
 function populateGroupSelect(){
   const sel = document.getElementById('groupSelect');
   const currentVal = sel.value;
@@ -721,6 +724,31 @@ function populateGroupSelect(){
   if (pendingGroupRestore && groupList.some(g => g.no === pendingGroupRestore)){
     sel.value = pendingGroupRestore;
     pendingGroupRestore = '';
+  }
+  if (pendingGroupFromShelf && currentShelf === pendingGroupFromShelfCode && groupList.some(g => g.no === pendingGroupFromShelf)){
+    sel.value = pendingGroupFromShelf;
+    pendingGroupFromShelf = '';
+    pendingGroupFromShelfCode = '';
+    updateAddBtn();
+    saveDraft();
+  }
+}
+
+// Auto-fill the Group field from the scanned shelf's Group No. If the group
+// list hasn't finished loading yet, remember the request so populateGroupSelect()
+// can apply it the moment the list becomes available.
+function trySetGroupFromShelf(shelfCode, groupNo){
+  if (!groupNo) return;
+  const sel = document.getElementById('groupSelect');
+  if (groupList.some(g => g.no === groupNo)){
+    sel.value = groupNo;
+    pendingGroupFromShelf = '';
+    pendingGroupFromShelfCode = '';
+    updateAddBtn();
+    saveDraft();
+  } else {
+    pendingGroupFromShelf = groupNo;
+    pendingGroupFromShelfCode = shelfCode;
   }
 }
 
@@ -754,22 +782,34 @@ async function loadGroupLookup(){
 }
 
 // ---- Storage bin (shelf) validation list — works offline after first load ----
-let shelfLookup = {}; // { storBin: { typ, whn } }
+let shelfLookup = {}; // { storBin: { whn, typ, bt, stockIndicator, stockRemoval, stockPlacement, stoLocation, groupNo, groupName, sec, empty } }
 let shelfLookupLoaded = false;
 const SHELF_LOOKUP_URL = 'https://raw.githubusercontent.com/sysorapro/warehouse-scanner-/main/shelves.csv';
-const SHELF_CACHE_KEY = 'warehouseScannerShelfCache';
+const SHELF_CACHE_KEY = 'warehouseScannerShelfCacheV2';
 
 function parseShelfCSV(text){
   const map = {};
   const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  const clean = s => (s || '').trim().replace(/^"|"$/g, '');
   for (let i = 0; i < lines.length; i++){
     if (i === 0 && /stor\.?\s*bin/i.test(lines[i])) continue; // skip header row
     const parts = lines[i].split(',');
     if (parts.length < 1) continue;
-    const storBin = parts[0].trim().replace(/^"|"$/g, '');
-    const typ = (parts[1] || '').trim().replace(/^"|"$/g, '');
-    const whn = (parts[2] || '').trim().replace(/^"|"$/g, '');
-    if (storBin) map[storBin] = { typ, whn };
+    const storBin = clean(parts[0]);
+    if (!storBin) continue;
+    map[storBin] = {
+      whn: clean(parts[1]),
+      typ: clean(parts[2]),
+      bt: clean(parts[3]),
+      stockIndicator: clean(parts[4]),
+      stockRemoval: clean(parts[5]),
+      stockPlacement: clean(parts[6]),
+      stoLocation: clean(parts[7]),
+      groupNo: clean(parts[8]),
+      groupName: clean(parts[9]),
+      sec: clean(parts[10]),
+      empty: clean(parts[11])
+    };
   }
   return map;
 }
@@ -788,7 +828,7 @@ async function loadShelfLookup(){
     }
   }catch(e){ /* ignore corrupt cache */ }
 
-  if (throttled('shelf')) return;
+  if (throttled('shelf_v2')) return;
 
   // 2) Try to refresh from GitHub in the background (silent if it fails —
   // the cached copy from step 1, if any, still stands).
@@ -799,7 +839,7 @@ async function loadShelfLookup(){
     shelfLookup = parseShelfCSV(text);
     shelfLookupLoaded = true;
     try{ localStorage.setItem(SHELF_CACHE_KEY, JSON.stringify(shelfLookup)); }catch(e){}
-    recordSuccess('shelf');
+    recordSuccess('shelf_v2');
     markSynced();
     if (pendingShelfRestore && currentShelf === pendingShelfRestore){
       refreshShelfStatusDisplay();
@@ -1117,25 +1157,38 @@ function applyOrderCode(text){
   document.getElementById('orderNo').value = text.trim();
 }
 
+function rejectShelfCode(code, message){
+  currentShelf = '';
+  document.getElementById('valShelf').textContent = t('notScanned');
+  document.getElementById('valShelf').classList.add('empty');
+  document.getElementById('slotShelf').classList.remove('filled');
+  const statusEl = document.getElementById('valShelfStatus');
+  statusEl.textContent = message;
+  statusEl.style.color = 'var(--red)';
+  statusEl.style.display = 'block';
+  document.getElementById('shelfHint').style.display = 'none';
+  updateAddBtn();
+  return false;
+}
+
 function applyShelfCode(text){
   const code = text.trim();
+  const match = shelfLookup[code];
 
-  if (shelfLookupLoaded && !shelfLookup[code]){
+  if (shelfLookupLoaded && !match){
     // Reject: this Stor. Bin isn't in the reference list, and we do have a
     // list to check against (from cache or a fresh fetch) — so it's invalid.
-    currentShelf = '';
-    document.getElementById('valShelf').textContent = t('notScanned');
-    document.getElementById('valShelf').classList.add('empty');
-    document.getElementById('slotShelf').classList.remove('filled');
-    const statusEl = document.getElementById('valShelfStatus');
-    statusEl.textContent = lang === 'ar'
+    return rejectShelfCode(code, lang === 'ar'
       ? `مرفوض: "${code}" غير موجود في قائمة الأرفف`
-      : `Rejected: "${code}" not found in shelf list`;
-    statusEl.style.color = 'var(--red)';
-    statusEl.style.display = 'block';
-    document.getElementById('shelfHint').style.display = 'none';
-    updateAddBtn();
-    return false;
+      : `Rejected: "${code}" not found in shelf list`);
+  }
+
+  if (shelfLookupLoaded && match && String(match.groupNo).trim().toUpperCase() === 'NU'){
+    // Reject: this bin is marked "Not Used" (Group No = NU) — treat exactly
+    // like a code that doesn't exist in the table at all.
+    return rejectShelfCode(code, lang === 'ar'
+      ? `مرفوض: "${code}" رف غير مستخدم (NU)`
+      : `Rejected: "${code}" is marked as not used (NU)`);
   }
 
   currentShelf = code;
@@ -1147,6 +1200,13 @@ function applyShelfCode(text){
   const hint = document.getElementById('shelfHint');
   hint.textContent = t('shelfLockedHint')(currentShelf);
   hint.style.display = 'block';
+
+  // Auto-fill the Group field from this shelf's Group No.
+  if (match && match.groupNo){
+    if (!groupLookupLoaded) loadGroupLookup();
+    trySetGroupFromShelf(code, match.groupNo);
+  }
+
   updateAddBtn();
   saveDraft();
   return true;
@@ -1157,7 +1217,7 @@ function refreshShelfStatusDisplay(){
   if (!currentShelf || !statusEl) return;
   const match = shelfLookup[currentShelf];
   if (match){
-    const details = [match.typ, match.whn].filter(Boolean).join(' · ');
+    const details = [match.whn, match.typ, match.bt, match.stockIndicator, match.stockRemoval, match.stockPlacement, match.stoLocation].filter(Boolean).join(' · ');
     statusEl.textContent = details ? `✓ ${details}` : '✓';
     statusEl.style.color = 'var(--mint)';
   } else {
@@ -1388,8 +1448,8 @@ function renderEntries(){
       <div class="info">
         <div class="codes">
           <span class="code-line"><span class="lbl-shelf">${t('entryLabelShelf')}</span> ${escapeHtml(e.shelf)}</span>
-          <span class="code-line"><span class="lbl-item">${t('entryLabelItem')}</span> ${escapeHtml(e.item)}${e.itemName ? ' ' + escapeHtml(e.itemName) : ''}</span>
           ${groupText ? `<span class="code-line"><span class="lbl-group">${t('entryLabelGroup')}</span> ${escapeHtml(groupText)}</span>` : ''}
+          <span class="code-line"><span class="lbl-item">${t('entryLabelItem')}</span> ${escapeHtml(e.item)}${e.itemName ? ' ' + escapeHtml(e.itemName) : ''}</span>
         </div>
         <div class="meta">${e.date} · ${e.time} · ${escapeHtml(e.responsible)}</div>
       </div>
@@ -1415,14 +1475,14 @@ function escapeHtml(s){
 function buildWorkbookAOA(entriesList){
   const list = entriesList || entries;
   const header = t('csvHeaders');
-  const rows = list.map(e => [e.orderNo, e.groupNo || '', e.groupName || '', e.shelf, e.item, e.itemName || '', e.responsible, e.date, e.time]);
+  const rows = list.map(e => [e.orderNo, e.shelf, e.groupNo || '', e.groupName || '', e.item, e.itemName || '', e.responsible, e.date, e.time]);
   return [header, ...rows];
 }
 
 function buildXLSXBlob(entriesList){
   const aoa = buildWorkbookAOA(entriesList);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:16},{wch:10},{wch:18},{wch:16},{wch:16},{wch:22},{wch:20},{wch:12},{wch:10}];
+  ws['!cols'] = [{wch:16},{wch:16},{wch:10},{wch:18},{wch:16},{wch:22},{wch:20},{wch:12},{wch:10}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Supply Order');
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
