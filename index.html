@@ -1138,7 +1138,7 @@ function applyItemCode(rawText){
 }
 
 async function manualItemEntry(){
-  const val = await customPrompt(t('manualPrompt'), '', Object.keys(itemLookup));
+  const val = await customPrompt(t('manualPrompt'), '', Object.keys(itemLookup).map(code => ({ code, name: itemLookup[code] })));
   if (val === null) return; // cancelled
   const trimmed = val.trim();
   if (!trimmed) return;
@@ -1899,20 +1899,28 @@ function customDialog(message, isPrompt, defaultValue, suggestions){
       const contains = [];
       for (let i = 0; i < suggestList.length; i++){
         if (starts.length >= MAX_SUGGESTIONS && contains.length >= MAX_SUGGESTIONS) break;
-        const code = suggestList[i];
+        const entry = suggestList[i];
+        const code = typeof entry === 'string' ? entry : entry.code;
         const lower = code.toLowerCase();
-        if (lower.startsWith(q)){ if (starts.length < MAX_SUGGESTIONS) starts.push(code); }
-        else if (lower.includes(q)){ if (contains.length < MAX_SUGGESTIONS) contains.push(code); }
+        if (lower.startsWith(q)){ if (starts.length < MAX_SUGGESTIONS) starts.push(entry); }
+        else if (lower.includes(q)){ if (contains.length < MAX_SUGGESTIONS) contains.push(entry); }
       }
       const matches = starts.concat(contains).slice(0, MAX_SUGGESTIONS);
       if (!matches.length){ hideSuggestions(); return; }
-      suggestBox.innerHTML = matches.map(code =>
-        `<div class="suggest-item" style="padding:10px 12px; cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13.5px; color:var(--text); border-bottom:1px solid rgba(255,255,255,0.08);">${escapeHtml(code)}</div>`
-      ).join('');
+      suggestBox.innerHTML = matches.map(entry => {
+        const code = typeof entry === 'string' ? entry : entry.code;
+        const name = typeof entry === 'string' ? '' : (entry.name || '');
+        return `<div class="suggest-item" style="padding:9px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="font-family:'Cairo',sans-serif; font-weight:700; font-size:13.5px; color:var(--text);">${escapeHtml(code)}</div>
+          ${name ? `<div style="font-family:'Tajawal',sans-serif; font-size:11.5px; color:var(--muted); margin-top:1px;">${escapeHtml(name)}</div>` : ''}
+        </div>`;
+      }).join('');
       suggestBox.style.display = 'block';
       Array.from(suggestBox.children).forEach((el, i) => {
+        const entry = matches[i];
+        const code = typeof entry === 'string' ? entry : entry.code;
         el.onclick = () => {
-          inputEl.value = matches[i];
+          inputEl.value = code;
           hideSuggestions();
           inputEl.focus();
         };
