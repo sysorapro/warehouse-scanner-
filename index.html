@@ -1795,8 +1795,8 @@ function renderEntries(){
           field === 'group' ? [e.groupNo, e.groupName] :
           field === 'item'  ? [e.item, e.itemName] :
           [e.shelf, e.groupNo, e.groupName, e.item, e.itemName];
-        const haystack = parts.filter(Boolean).join(' ').toLowerCase();
-        return haystack.includes(q);
+        const haystack = parts.filter(Boolean).join(' ');
+        return matchesQuery(haystack, q);
       })
     : indexed;
 
@@ -1971,6 +1971,23 @@ function finishEdit(){
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Shared text-matching helper used by every search box in the app (Logged
+// Entries, Saved Orders, and — separately, with its own ranking logic —
+// manual item entry). Plain text does a normal substring match; "*" acts as
+// a SQL LIKE-style wildcard, so "la*rco*50*" matches anything containing
+// "la", then later "rco", then later "50", in that order, with anything in
+// between (e.g. matches "LA ROCHE...50ML").
+function matchesQuery(haystack, rawQuery){
+  const q = (rawQuery || '').trim().toLowerCase();
+  if (!q) return true;
+  const text = (haystack || '').toLowerCase();
+  if (q.indexOf('*') !== -1){
+    const escaped = q.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    try{ return new RegExp(escaped, 'i').test(text); }catch(e){ return false; }
+  }
+  return text.includes(q);
 }
 
 function buildWorkbookAOA(entriesList){
@@ -2373,8 +2390,8 @@ function getFilteredOrders(){
       field === 'name'    ? [o.responsible] :
       field === 'date'    ? [dateStr] :
       [o.orderNo, o.responsible, dateStr];
-    const haystack = parts.filter(Boolean).join(' ').toLowerCase();
-    return haystack.includes(q);
+    const haystack = parts.filter(Boolean).join(' ');
+    return matchesQuery(haystack, q);
   });
 }
 
