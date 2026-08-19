@@ -721,10 +721,22 @@ function generateUniqueActionCode(){
 }
 
 function setAllPageControlsEnabled(enabled){
+  // Controls remain visually and physically active at all times.
+  // Before selecting Action Type, operational functions are guarded by requireActionType().
   document.querySelectorAll('button, input, select').forEach(el=>{
     if (el.id === 'actionTypeSelect' || el.dataset.actionControl === 'true') return;
-    el.disabled = !enabled;
+    el.disabled = false;
   });
+}
+
+function requireActionType(){
+  const selected = document.getElementById('actionTypeSelect')?.value || actionType || '';
+  if (selected) return true;
+  playErrorSound();
+  toast(lang === 'ar' ? 'اختار نوع الإجراء أولاً (جديد / تعديل)' : 'Please select the Action Type first (New / Edit)', 'warning');
+  const el = document.getElementById('actionTypeSelect');
+  if (el) el.focus();
+  return false;
 }
 
 function applyActionTypeState(type, generateEditCode=true){
@@ -1268,6 +1280,7 @@ function toast(msg, type){
 }
 
 async function startScan(target){
+  if (!requireActionType()) return;
   scanTarget = target;
   document.getElementById('scanTitle').textContent =
     target === 'shelf' ? t('scanTitleShelf') :
@@ -1523,6 +1536,7 @@ function applyItemCode(rawText){
 }
 
 async function manualItemEntry(){
+  if (!requireActionType()) return;
   const hasGtinData = Object.keys(gtinLookup).length > 0;
   // Suggestions are keyed by GTIN when the item list provides one (matching
   // scan behavior below), otherwise fall back to the original ItemCode-based
@@ -1811,6 +1825,7 @@ let pendingGroupRestore = '';
 let pendingShelfRestore = '';
 
 async function addEntry(){
+  if (!requireActionType()) return;
   const orderNo = document.getElementById('orderNo').value.trim();
   const responsible = document.getElementById('responsible').value.trim();
   const groupVal = document.getElementById('groupSelect').value;
@@ -1989,6 +2004,7 @@ function renderEntries(){
 }
 
 async function deleteEntry(i){
+  if (!requireActionType()) return;
   const msg = lang === 'ar' ? 'متأكد إنك عايز تمسح الصنف ده من السجل؟' : 'Delete this item from the log?';
   const proceed = await customConfirm(msg);
   if (!proceed) return;
@@ -1998,6 +2014,7 @@ async function deleteEntry(i){
 }
 
 async function editEntry(i){
+  if (!requireActionType()) return;
   const e = entries[i];
   if (!e) return;
 
@@ -2018,6 +2035,7 @@ async function editEntry(i){
 // (this mirrors "Shelf Code" in the main form, which is scan-only there
 // too — there's no manual shelf entry in the main flow to match against).
 async function editEntryShelf(i){
+  if (!requireActionType()) return;
   const e = entries[i];
   if (!e) return;
   editingEntryIndex = i;
@@ -2028,6 +2046,7 @@ async function editEntryShelf(i){
 // Group is edited via a real dropdown of the loaded group list — same
 // shape as the "Group" field in the main form.
 async function editEntryGroup(i){
+  if (!requireActionType()) return;
   const e = entries[i];
   if (!e) return;
   if (!groupLookupLoaded) await loadGroupLookup(true);
@@ -2045,6 +2064,7 @@ async function editEntryGroup(i){
 
 // Item supports both Scan and Manual, exactly like the main form does.
 async function editEntryItem(i){
+  if (!requireActionType()) return;
   const e = entries[i];
   if (!e) return;
   const mode = await customChoice(t('entryLabelItem'), [
@@ -2234,6 +2254,7 @@ function buildPrintableHTML(){
 // wired up at all — if the print dialog never appears when tapped, that's a
 // platform limitation to confirm on your actual APK build, not a bug in this code.
 function exportPDF(){
+  if (!requireActionType()) return;
   if (entries.length === 0){ toast(t('toastNoData'), 'warning'); return; }
   let iframe = document.getElementById('pdfPrintFrame');
   if (!iframe){
@@ -2258,6 +2279,7 @@ function exportPDF(){
 }
 
 function exportExcel(){
+  if (!requireActionType()) return;
   if (entries.length === 0){ toast(t('toastNoData'), 'warning'); return; }
   if (typeof XLSX === 'undefined'){
     toast(lang === 'ar' ? 'مكتبة Excel لسه بتتحمّل، حاول تاني بعد ثانيتين' : 'Excel library still loading, try again in a moment', 'warning');
@@ -2274,6 +2296,7 @@ function exportExcel(){
 }
 
 async function shareFile(){
+  if (!requireActionType()) return;
   if (entries.length === 0){ toast(t('toastNoDataSend'), 'warning'); return; }
 
   try{
@@ -2330,6 +2353,7 @@ function updateNetStatus(){
 // failure by design (so the normal background auto-sync never nags), but
 // this explicit action gets its own clear success/failure feedback.
 async function forceSyncNow(){
+  if (!requireActionType()) return;
   if (forceSyncNow._busy) return;
   forceSyncNow._busy = true;
   toast(t('syncingNow'));
@@ -2382,6 +2406,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function confirmReset(){
+  if (!requireActionType()) return;
   const msg = lang === 'ar'
     ? 'هل أنت متأكد؟ ده هيمسح كل البيانات المسجّلة (السجلات، الأكواد، رقم الأمر) عشان تبدأ أمر توريد جديد. الإجراء ده لا يمكن التراجع عنه.'
     : 'Are you sure? This will clear all logged entries, scanned codes, and the order number to start a new supply order. This cannot be undone.';
@@ -2437,6 +2462,7 @@ function persistSavedOrders(){
 let editingOrderId = null;
 
 async function saveCurrentOrder(){
+  if (!requireActionType()) return;
   const orderNo = document.getElementById('orderNo').value.trim();
   const responsible = document.getElementById('responsible').value.trim();
   const selectedAction = document.getElementById('actionTypeSelect')?.value || actionType;
@@ -2529,6 +2555,7 @@ function editSavedOrder(id){
 }
 
 function openSavedOrders(){
+  if (!requireActionType()) return;
   selectedOrderIds.clear();
   const searchEl = document.getElementById('ordersSearch');
   if (searchEl) searchEl.value = '';
@@ -2649,6 +2676,7 @@ function exportOrderEntries(entriesList, orderLabel){
 }
 
 async function exportSelectedOrders(){
+  if (!requireActionType()) return;
   const selected = getSelectedOrders();
   if (selected.length === 0) return;
   if (typeof XLSX === 'undefined'){
@@ -2672,6 +2700,7 @@ async function exportSelectedOrders(){
 }
 
 async function shareSelectedOrders(){
+  if (!requireActionType()) return;
   const selected = getSelectedOrders();
   if (selected.length === 0) return;
   const entriesList = selected.flatMap(o => o.entries);
@@ -2703,6 +2732,7 @@ async function shareSelectedOrders(){
 }
 
 async function deleteSelectedOrders(){
+  if (!requireActionType()) return;
   const selected = getSelectedOrders();
   if (selected.length === 0) return;
   const proceed = await customConfirm(t('confirmDeleteOrders')(selected.length));
