@@ -2173,6 +2173,12 @@ function matchesQuery(haystack, rawQuery){
   return text.includes(q);
 }
 
+function formatActionTypeForExport(value){
+  if (value === 'new') return lang === 'ar' ? 'جديد' : 'New';
+  if (value === 'edit') return lang === 'ar' ? 'تعديل' : 'Edit';
+  return value || '';
+}
+
 function buildWorkbookAOA(entriesList){
   const list = entriesList || entries;
   const header = t('csvHeaders');
@@ -2180,7 +2186,7 @@ function buildWorkbookAOA(entriesList){
   const rows = list.map(e => [
     e.orderNo, e.shelf, e.groupNo || '', e.groupName || '', e.item, e.itemName || '',
     e.responsible, e.date, e.time,
-    e.actionType || currentActionType
+    formatActionTypeForExport(e.actionType || currentActionType)
   ]);
   return [header, ...rows];
 }
