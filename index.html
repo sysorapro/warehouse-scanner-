@@ -221,6 +221,11 @@
   /* Camera modal */
   .modal{ position:fixed; inset:0; background:#000; z-index:100; display:none; flex-direction:column; }
   .modal.open{ display:flex; }
+  /* The camera must always paint above any other full-screen modal (Saved
+     Orders, Item↔Shelf Link, etc.) that might still be open underneath it —
+     otherwise the scan view is hidden behind that screen instead of showing
+     the camera. */
+  #cameraModal{ z-index:210; }
   .modal-top{ padding:16px 18px; display:flex; align-items:center; justify-content:space-between; color:#fff; font-family:'Cairo'; font-weight:700; }
   .modal-top button{ background:rgba(255,255,255,.12); border:none; color:#fff; width:34px; height:34px; border-radius:10px; font-size:16px; }
   #reader{ flex:1; position:relative; min-height:0; }
@@ -482,21 +487,37 @@
   </div>
 </div>
 
-<!-- Item ↔ Shelf link screen — fully independent of items.csv/entries; just
-     enriches an uploaded (ItemCode,ItemName) list with shelves.csv data -->
-<div class="modal app-modal" id="shelfLinkModal">
+<!-- Item ↔ Shelf link: list of uploaded sheets — you may upload more than
+     one, each kept under its own name/number, exportable/shareable/deletable
+     independently. Fully independent of items.csv/entries; just enriches an
+     uploaded (ItemCode,ItemName) list with shelves.csv data -->
+<div class="modal app-modal" id="shelfLinkSheetsModal">
   <div class="modal-top">
-    <button onclick="closeShelfLink()">‹</button>
+    <button onclick="closeShelfLinkSheets()">‹</button>
     <span data-i18n="shelfLinkTitle">ربط أصناف بالأرفف</span>
     <button onclick="triggerShelfLinkUpload()" title="Upload">📁</button>
   </div>
   <input type="file" id="shelfLinkFileInput" accept=".csv,text/csv" style="display:none;" onchange="handleShelfLinkFileUpload(event)">
+  <div style="flex:1; overflow-y:auto;" id="shelfLinkSheetsListEl"></div>
+</div>
+
+<!-- Item ↔ Shelf link: a single uploaded sheet's items (scan/delete rows) -->
+<div class="modal app-modal" id="shelfLinkModal">
+  <div class="modal-top">
+    <button onclick="backToShelfLinkSheets()">‹</button>
+    <span id="shelfLinkSheetTitle" data-i18n="shelfLinkTitle">ربط أصناف بالأرفف</span>
+    <span style="width:34px;"></span>
+  </div>
   <div class="orders-toolbar" style="display:flex; align-items:center; justify-content:space-between;">
     <span id="shelfLinkCountLabel" style="font-size:12px;color:var(--muted);"></span>
-    <button onclick="exportShelfLinkList()" style="background:var(--amber); color:#1a1204; border:none; border-radius:9px; padding:9px 16px; font-family:'Cairo'; font-weight:800; font-size:12.5px;">📊 <span data-i18n="exportBtn">تصدير Excel</span></button>
+    <div style="display:flex; gap:8px;">
+      <button onclick="exportShelfLinkList()" title="Export" style="background:var(--amber); color:#1a1204; border:none; border-radius:9px; width:38px; height:34px; font-size:14px;">📊</button>
+      <button onclick="shareShelfLinkList()" title="Share" style="background:var(--amber); color:#1a1204; border:none; border-radius:9px; width:38px; height:34px; font-size:14px;">📤</button>
+    </div>
   </div>
   <div style="flex:1; overflow-y:auto;" id="shelfLinkListEl"></div>
 </div>
+
 
 <div class="toast" id="toast"></div>
 
@@ -593,7 +614,7 @@ const i18n = {
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف',
     menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
-    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
+    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
     confirmCombineExport:'هل تريد دمج الأوامر المختارة في ملف Excel واحد؟\n(إلغاء = ملف منفصل لكل أمر)',
@@ -637,7 +658,7 @@ const i18n = {
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete',
     menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
-    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
+    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
     confirmCombineExport:'Combine the selected orders into one Excel file?\n(Cancel = a separate file per order)',
@@ -668,8 +689,15 @@ let editingEntryIndex = -1;
 let editingEntryField = '';
 
 // ---- Item ↔ Shelf link (independent of items.csv/entries) ----
-const SHELF_LINK_KEY = 'warehouseScannerShelfLinkList';
-let shelfLinkList = [];
+// Supports multiple named/numbered sheets, since more than one CSV may be
+// uploaded over time. Each sheet keeps its own rows and can be opened,
+// exported, shared, and deleted independently.
+const SHELF_LINK_KEY = 'warehouseScannerShelfLinkList'; // legacy single-list key, read once for migration
+const SHELF_LINK_SHEETS_KEY = 'warehouseScannerShelfLinkSheets';
+let shelfLinkSheets = []; // [{ id, name, rows: [...] }]
+let shelfLinkSheetsLoaded = false;
+let currentShelfLinkSheetId = null;
+let shelfLinkList = []; // rows of whichever sheet is currently open in the detail view
 // When >= 0, the next successful "shelfLink" scan fills shelfLinkList[shelfLinkTargetIndex]
 let shelfLinkTargetIndex = -1;
 
@@ -690,20 +718,76 @@ function parseShelfLinkUploadCSV(text){
   }
   return rows;
 }
-function saveShelfLinkList(){
-  try{ localStorage.setItem(SHELF_LINK_KEY, JSON.stringify(shelfLinkList)); }catch(e){}
+function generateShelfLinkSheetId(){
+  return 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
-function loadShelfLinkListFromStorage(){
-  try{ shelfLinkList = JSON.parse(localStorage.getItem(SHELF_LINK_KEY) || '[]'); }catch(e){ shelfLinkList = []; }
+function getShelfLinkSheet(id){
+  return shelfLinkSheets.find(s => s.id === id) || null;
+}
+function saveShelfLinkSheets(){
+  try{ localStorage.setItem(SHELF_LINK_SHEETS_KEY, JSON.stringify(shelfLinkSheets)); }catch(e){}
+}
+// Persists whichever sheet is currently open in the detail view.
+function saveShelfLinkList(){
+  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
+  if (sheet) sheet.rows = shelfLinkList;
+  saveShelfLinkSheets();
+}
+function loadShelfLinkSheetsFromStorage(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(SHELF_LINK_SHEETS_KEY) || 'null');
+    if (Array.isArray(raw)){ shelfLinkSheets = raw; return; }
+  }catch(e){}
+  shelfLinkSheets = [];
+  // One-time migration from the old single-list storage format, so any
+  // previously uploaded list isn't lost when this becomes multi-sheet.
+  try{
+    const oldRaw = localStorage.getItem(SHELF_LINK_KEY);
+    if (oldRaw){
+      const oldRows = JSON.parse(oldRaw);
+      if (Array.isArray(oldRows) && oldRows.length){
+        shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: (lang === 'ar' ? 'شيت 1' : 'Sheet 1'), rows: oldRows });
+        saveShelfLinkSheets();
+      }
+      localStorage.removeItem(SHELF_LINK_KEY);
+    }
+  }catch(e){}
 }
 
 function openShelfLink(){
+  if (!shelfLinkSheetsLoaded){ loadShelfLinkSheetsFromStorage(); shelfLinkSheetsLoaded = true; }
+  renderShelfLinkSheetsList();
+  document.getElementById('shelfLinkSheetsModal').classList.add('open');
+}
+function closeShelfLinkSheets(){
+  document.getElementById('shelfLinkSheetsModal').classList.remove('open');
+}
+
+function openShelfLinkSheet(id){
+  const sheet = getShelfLinkSheet(id);
+  if (!sheet) return;
+  currentShelfLinkSheetId = id;
+  shelfLinkList = sheet.rows;
+  document.getElementById('shelfLinkSheetTitle').textContent = sheet.name;
   renderShelfLinkList();
+  document.getElementById('shelfLinkSheetsModal').classList.remove('open');
   document.getElementById('shelfLinkModal').classList.add('open');
 }
-function closeShelfLink(){
+function backToShelfLinkSheets(){
   document.getElementById('shelfLinkModal').classList.remove('open');
+  currentShelfLinkSheetId = null;
+  renderShelfLinkSheetsList();
+  document.getElementById('shelfLinkSheetsModal').classList.add('open');
 }
+
+async function deleteShelfLinkSheet(id){
+  const proceed = await customConfirm(t('confirmDeleteShelfLinkSheet'));
+  if (!proceed) return;
+  shelfLinkSheets = shelfLinkSheets.filter(s => s.id !== id);
+  saveShelfLinkSheets();
+  renderShelfLinkSheetsList();
+}
+
 function triggerShelfLinkUpload(){
   document.getElementById('shelfLinkFileInput').click();
 }
@@ -712,10 +796,6 @@ async function handleShelfLinkFileUpload(event){
   const file = event.target.files[0];
   event.target.value = ''; // reset so re-selecting the same file still fires change next time
   if (!file) return;
-  if (shelfLinkList.length){
-    const proceed = await customConfirm(t('confirmReplaceShelfLinkList'));
-    if (!proceed) return;
-  }
   try{
     const text = await file.text();
     const rows = parseShelfLinkUploadCSV(text);
@@ -723,9 +803,12 @@ async function handleShelfLinkFileUpload(event){
       toast(t('errShelfLinkEmptyFile'), 'warning');
       return;
     }
-    shelfLinkList = rows;
-    saveShelfLinkList();
-    renderShelfLinkList();
+    const defaultName = (lang === 'ar' ? 'شيت ' : 'Sheet ') + (shelfLinkSheets.length + 1);
+    const name = await customPrompt(t('shelfLinkNamePrompt'), defaultName);
+    if (name === null) return; // cancelled
+    shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: name.trim() || defaultName, rows });
+    saveShelfLinkSheets();
+    renderShelfLinkSheetsList();
     toast(t('toastShelfLinkUploaded', rows.length), 'success');
   }catch(e){
     toast(t('errShelfLinkEmptyFile'), 'warning');
@@ -774,6 +857,25 @@ async function deleteShelfLinkRow(i){
   renderShelfLinkList();
 }
 
+function renderShelfLinkSheetsList(){
+  const listEl = document.getElementById('shelfLinkSheetsListEl');
+  if (!shelfLinkSheets.length){
+    listEl.innerHTML = `<div class="empty-state" style="margin:18px;">${t('shelfLinkEmptyState')}</div>`;
+    return;
+  }
+  listEl.innerHTML = shelfLinkSheets.map(s => {
+    const scannedCount = s.rows.filter(r => r.shelf).length;
+    return `
+    <div class="order-card" onclick="openShelfLinkSheet('${s.id}')" style="cursor:pointer;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:800; font-family:'Cairo'; font-size:14px; color:var(--text);">${escapeHtml(s.name)}</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:3px;">${scannedCount} / ${s.rows.length} ${t('itemsUnit')}</div>
+      </div>
+      <button onclick="event.stopPropagation(); deleteShelfLinkSheet('${s.id}')" style="background:none; border:none; color:var(--red); font-size:16px; padding:6px; flex-shrink:0;">🗑</button>
+    </div>`;
+  }).join('');
+}
+
 function renderShelfLinkList(){
   const countLabel = document.getElementById('shelfLinkCountLabel');
   const scannedCount = shelfLinkList.filter(r => r.shelf).length;
@@ -800,15 +902,28 @@ function renderShelfLinkList(){
   }).join('');
 }
 
-function buildShelfLinkXLSXBlob(){
+function buildShelfLinkAOA(){
   const header = ['Item Code','Item Name','Shelf Code','WhN','Typ','BT','Stock Indicator','Stock Removal','Stock Placement','Sto Location','Group No','Group Name','Sec','Empty'];
   const rows = shelfLinkList.map(r => [r.itemCode, r.itemName, r.shelf, r.whn, r.typ, r.bt, r.stockIndicator, r.stockRemoval, r.stockPlacement, r.stoLocation, r.groupNo, r.groupName, r.sec, r.empty]);
-  const aoa = [header, ...rows];
+  return [header, ...rows];
+}
+function buildShelfLinkXLSXBlob(){
+  const aoa = buildShelfLinkAOA();
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Item-Shelf Link');
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function buildShelfLinkCSVBlob(){
+  const aoa = buildShelfLinkAOA();
+  const csv = aoa.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  return new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+}
+function shelfLinkSheetFileBaseName(){
+  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
+  const raw = (sheet ? sheet.name : '') || 'ItemShelfLink';
+  return raw.replace(/[^a-zA-Z0-9\u0600-\u06FF\-_]+/g, '_').replace(/^_+|_+$/g, '') || 'ItemShelfLink';
 }
 
 function exportShelfLinkList(){
@@ -820,12 +935,48 @@ function exportShelfLinkList(){
   const blob = buildShelfLinkXLSXBlob();
   const url = URL.createObjectURL(blob);
   const now = new Date();
-  const fileName = `ItemShelfLink_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}_${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}.xlsx`;
+  const fileName = `${shelfLinkSheetFileBaseName()}_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}_${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}.xlsx`;
   const a = document.createElement('a');
   a.href = url; a.download = fileName;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast(t('toastExported') + ' Downloads/' + fileName, 'success');
+}
+
+// Shares the currently open sheet as CSV — some Android browsers reject
+// sharing .xlsx files outright, while .csv shares reliably and still opens
+// fine in Excel/Sheets. The Export button above still produces a real .xlsx.
+async function shareShelfLinkList(){
+  if (!shelfLinkList.length){ toast(t('toastNoDataSend'), 'warning'); return; }
+  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
+  const label = sheet ? sheet.name : '—';
+  try{
+    const blob = buildShelfLinkCSVBlob();
+    const fileName = `${shelfLinkSheetFileBaseName()}.csv`;
+
+    if (typeof navigator.share === 'function'){
+      try{
+        const file = new File([blob], fileName, { type: 'text/csv' });
+        await navigator.share({ files: [file], title: label, text: label });
+        toast(t('toastShareGuide2'), 'success');
+        playAddSound();
+        return;
+      }catch(shareErr){
+        if (shareErr && shareErr.name === 'AbortError') return; // user closed the share sheet on purpose
+        // any other failure: fall through to the guaranteed download below
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    playAddSound();
+    toast(t('toastShareGuide'), 'success');
+  }catch(err){
+    toast((lang === 'ar' ? 'تعذّر تنزيل الملف: ' : 'Could not download file: ') + (err && err.message ? err.message : String(err)), 'error');
+  }
 }
 
 let html5QrCode = null;
@@ -3122,7 +3273,6 @@ try{
 }catch(e){}
 applyTheme();
 applyLang();
-loadShelfLinkListFromStorage();
 offerDraftRestore().then(applyLastEmployeeNameIfEmpty);
 checkFirstRunGate();
 loadItemLookup();
