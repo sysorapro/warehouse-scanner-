@@ -551,11 +551,23 @@
     <span style="width:34px;"></span>
   </div>
   <div style="padding:10px 14px 0;">
-    <select id="reportsRangeSelect" onchange="renderReports()">
-      <option value="0" data-i18n="reportsRangeAll">كل الفترات</option>
+    <select id="reportsRangeSelect" onchange="onReportsRangeChange()">
+      <option value="all" data-i18n="reportsRangeAll">كل الفترات</option>
       <option value="7" data-i18n="reportsRange7">آخر 7 أيام</option>
       <option value="30" data-i18n="reportsRange30">آخر 30 يوم</option>
+      <option value="lastMonth" data-i18n="reportsRangeLastMonth">آخر شهر</option>
+      <option value="custom" data-i18n="reportsRangeCustom">فترة مخصصة</option>
     </select>
+    <div class="row" id="reportsCustomRangeRow" style="display:none; margin-top:8px;">
+      <div>
+        <label data-i18n="reportsFromLabel">من</label>
+        <input type="date" id="reportsFromDate" onchange="renderReports()">
+      </div>
+      <div>
+        <label data-i18n="reportsToLabel">إلى</label>
+        <input type="date" id="reportsToDate" onchange="renderReports()">
+      </div>
+    </div>
   </div>
   <div style="flex:1; overflow-y:auto; padding:4px 14px 14px;" id="reportsBody"></div>
 </div>
@@ -656,7 +668,7 @@ const i18n = {
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف', bulkChangeGroupBtn:'تغيير الجروب', confirmBulkDeleteEntries:(n)=>`متأكد إنك عايز تمسح ${n} صنف من السجل؟`, toastBulkGroupChanged:(n)=>`✅ اتغيّر الجروب لـ ${n} صنف`, toastBulkEntriesDeleted:(n)=>`✅ اتمسح ${n} صنف من السجل`,
     menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuReports:'التقارير والإحصائيات', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر 30 يوم', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
-    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
+    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', shelfLinkResponsiblePrompt:'اسم الموظف المسؤول عن الشيت ده:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
     confirmCombineExport:'هل تريد دمج الأوامر المختارة في ملف Excel واحد؟\n(إلغاء = ملف منفصل لكل أمر)',
@@ -700,7 +712,7 @@ const i18n = {
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete', bulkChangeGroupBtn:'Change group', confirmBulkDeleteEntries:(n)=>`Delete ${n} item(s) from the log?`, toastBulkGroupChanged:(n)=>`✅ Group changed for ${n} item(s)`, toastBulkEntriesDeleted:(n)=>`✅ Deleted ${n} item(s) from the log`,
     menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuReports:'Reports & Stats', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last 30 days', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
-    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
+    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', shelfLinkResponsiblePrompt:'Employee responsible for this sheet:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
     confirmCombineExport:'Combine the selected orders into one Excel file?\n(Cancel = a separate file per order)',
@@ -861,7 +873,9 @@ async function handleShelfLinkFileUpload(event){
     const defaultName = (lang === 'ar' ? 'شيت ' : 'Sheet ') + (shelfLinkSheets.length + 1);
     const name = await customPrompt(t('shelfLinkNamePrompt'), defaultName);
     if (name === null) return; // cancelled
-    shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: name.trim() || defaultName, rows });
+    const responsible = await customPrompt(t('shelfLinkResponsiblePrompt'), loadLastEmployeeName());
+    if (responsible === null) return; // cancelled
+    shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: name.trim() || defaultName, responsible: responsible.trim(), rows });
     saveShelfLinkSheets();
     renderShelfLinkSheetsList();
     toast(t('toastShelfLinkUploaded', rows.length), 'success');
@@ -3304,7 +3318,7 @@ function getAllReportableEntries(){
     s.rows.filter(r => r.shelf).map(r => ({
       item: r.itemCode, itemName: r.itemName, shelf: r.shelf,
       groupNo: r.groupNo, groupName: r.groupName,
-      responsible: '', orderNo: s.name,
+      responsible: s.responsible || '', orderNo: s.name,
       date: r.scanDate || '', time: r.scanTime || '',
       sourceType: 'uploaded', sourceLabel: s.name
     }))
