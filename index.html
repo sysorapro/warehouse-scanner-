@@ -180,6 +180,12 @@
   .entry .meta{ font-size:11px; color:var(--muted); margin-top:2px; }
   .entry .edit{ background:none; border:none; color:var(--amber-fg); font-size:16px; padding:4px 6px; }
   .entry .del{ background:none; border:none; color:var(--red); font-size:18px; padding:4px 8px; }
+  .entry input[type=checkbox]{ width:19px; height:19px; accent-color:var(--amber); flex-shrink:0; }
+  .entries-actionbar{ display:none; gap:8px; padding:10px 4px; margin-bottom:8px; border-bottom:1px solid var(--border); }
+  .entries-actionbar.show{ display:flex; }
+  .entries-actionbar button{ flex:1; border:none; border-radius:11px; padding:10px 6px; font-family:'Cairo'; font-weight:800; font-size:12px; }
+  .entries-actionbar .eab-group{ background:var(--amber); color:#1a1204; }
+  .entries-actionbar .eab-delete{ background:var(--red); color:#fff; }
   .empty-state{ text-align:center; padding:22px 10px; color:var(--muted); font-size:13px; }
 
   .topactions{ display:flex; gap:10px; padding:0 18px; }
@@ -341,6 +347,7 @@
         <button onclick="confirmReset(); toggleMoreMenu();">🗑 <span data-i18n="menuNewOrder">أمر جديد</span></button>
         <button onclick="openSavedOrders(); toggleMoreMenu();">📂 <span data-i18n="menuSavedOrders">الأوامر المحفوظة</span></button>
         <button onclick="openShelfLink(); toggleMoreMenu();">🔗 <span data-i18n="menuShelfLink">ربط أصناف بالأرفف</span></button>
+        <button onclick="openReports(); toggleMoreMenu();">📈 <span data-i18n="menuReports">التقارير والإحصائيات</span></button>
         <button onclick="forceSyncNow(); toggleMoreMenu();">🔄 <span data-i18n="menuSyncNow">تحديث البيانات الآن</span></button>
         <button onclick="exportPDF(); toggleMoreMenu();">🖨️ <span data-i18n="pdfBtn">تصدير PDF</span></button>
         <button onclick="toggleLang(); toggleMoreMenu();"><span id="langBtn">AR</span> <span data-i18n="menuLang">اللغة</span></button>
@@ -409,6 +416,10 @@
         </div>
       </div>
       <div class="hint-note" id="shelfHint" style="display:none;"></div>
+      <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin:12px 0 0;">
+        <input type="checkbox" id="batchScanToggle" onchange="toggleBatchScanMode()" style="width:17px; height:17px; accent-color:var(--amber); flex-shrink:0;">
+        <span data-i18n="batchScanLabel">وضع المسح المتتابع — يضيف الصنف تلقائيًا ويفتح الكاميرا تاني للي بعده</span>
+      </label>
       <button class="addbtn" id="addBtn" onclick="addEntry()" style="margin-top:14px;"><span data-i18n="addBtn">➕ إضافة السطر</span></button>
     </div>
 
@@ -416,6 +427,7 @@
       <h3><span class="n">3</span> <span data-i18n="sectionEntries">السجلات المسجّلة</span> (<span id="countLbl">0</span>)
         <button id="entriesSearchToggleBtn" onclick="toggleEntriesSearch()" style="margin-inline-start:auto; background:none; border:1px solid var(--border); border-radius:8px; padding:4px 9px; font-size:12px; color:var(--muted); cursor:pointer;">🔍</button>
         <button id="statsToggleBtn" onclick="toggleStatsPanel()" style="background:none; border:1px solid var(--border); border-radius:8px; padding:4px 9px; font-size:12px; color:var(--muted); cursor:pointer;">📊</button>
+        <button id="entriesSelectToggleBtn" onclick="toggleEntrySelectMode()" style="background:none; border:1px solid var(--border); border-radius:8px; padding:4px 9px; font-size:12px; color:var(--muted); cursor:pointer;">☑️</button>
       </h3>
       <div id="statsPanel" style="display:none;"></div>
       <div id="entriesSearchBox" style="display:none; margin-bottom:10px;">
@@ -426,6 +438,17 @@
           <option value="item" data-i18n="searchFieldItem">كود الصنف فقط</option>
         </select>
         <input type="text" id="entriesSearch" data-i18n-ph="entriesSearchPh" placeholder="ابحث برقم الرف / الجروب / كود الصنف" oninput="renderEntries()">
+      </div>
+      <div id="entriesSelectAllRow" style="display:none; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text); margin:0;">
+          <input type="checkbox" id="selectAllEntries" onchange="toggleSelectAllEntries()">
+          <span data-i18n="selectAllLabel">تحديد الكل</span>
+        </label>
+        <span id="entriesSelectedCount" style="font-size:12px; color:var(--muted);"></span>
+      </div>
+      <div class="entries-actionbar" id="entriesActionBar">
+        <button class="eab-group" onclick="bulkChangeGroupForEntries()">🔀 <span data-i18n="bulkChangeGroupBtn">تغيير الجروب</span></button>
+        <button class="eab-delete" onclick="bulkDeleteEntries()">🗑 <span data-i18n="deleteBtn">حذف</span></button>
       </div>
       <div id="entriesList">
         <div class="empty-state" data-i18n="emptyState">لسه مفيش أي أصناف متسجلة في أمر التوريد ده</div>
@@ -518,6 +541,25 @@
   <div style="flex:1; overflow-y:auto;" id="shelfLinkListEl"></div>
 </div>
 
+<!-- Reports & Stats: aggregates across every saved order (not the
+     in-progress one) — items/orders per day & month, top items, and
+     per-responsible performance. -->
+<div class="modal app-modal" id="reportsModal">
+  <div class="modal-top">
+    <button onclick="closeReports()">‹</button>
+    <span data-i18n="menuReports">التقارير والإحصائيات</span>
+    <span style="width:34px;"></span>
+  </div>
+  <div style="padding:10px 14px 0;">
+    <select id="reportsRangeSelect" onchange="renderReports()">
+      <option value="0" data-i18n="reportsRangeAll">كل الفترات</option>
+      <option value="7" data-i18n="reportsRange7">آخر 7 أيام</option>
+      <option value="30" data-i18n="reportsRange30">آخر 30 يوم</option>
+    </select>
+  </div>
+  <div style="flex:1; overflow-y:auto; padding:4px 14px 14px;" id="reportsBody"></div>
+</div>
+
 
 <div class="toast" id="toast"></div>
 
@@ -592,11 +634,11 @@ const i18n = {
     groupLabel:'المجموعة', groupPlaceholder:'-- اختر مجموعة --',
     sectionScan:'مسح الأكواد', shelfLabel:'كود الرف', itemLabel:'كود الصنف', notScanned:'لم يُمسح بعد',
     scanShelfBtn:'📷 مسح الرف', scanItemBtn:'📷 مسح الصنف', addBtn:'➕ إضافة السطر',
-    manualItemBtn:'⌨️ يدوي', manualPrompt:'اكتب كود الصنف يدويًا:', manualPromptGtin:'اكتب GTIN يدويًا:', manualShelfPrompt:'اكتب كود الرف يدويًا:',
+    manualItemBtn:'⌨️ يدوي', manualPrompt:'اكتب كود الصنف يدويًا:', manualPromptGtin:'اكتب GTIN يدويًا:', manualShelfPrompt:'اكتب كود الرف يدويًا:', batchScanLabel:'وضع المسح المتتابع — يضيف الصنف تلقائيًا ويفتح الكاميرا تاني للي بعده',
     sectionEntries:'السجلات المسجّلة', emptyState:'لسه مفيش أي أصناف متسجلة في أمر التوريد ده', entriesSearchPh:'ابحث برقم الرف / الجروب / كود الصنف', entriesNoMatch:'مفيش نتايج مطابقة للبحث', statsTotalItems:'إجمالي عدد الأصناف', statsNoGroup:'بدون مجموعة', searchFieldAll:'بحث في كل الحقول', searchFieldShelf:'كود الرف فقط', searchFieldGroup:'الجروب فقط', searchFieldItem:'كود الصنف فقط', searchFieldOrderNo:'رقم الأمر فقط', searchFieldName:'الاسم فقط', searchFieldDate:'التاريخ فقط',
     exportBtn:'تصدير Excel', exportSub:'ملف Excel', sendBtn:'مشاركة', sendSub:'اختر التطبيق', pdfBtn:'تصدير PDF',
     scanTitleShelf:'مسح كود الرف', scanTitleItem:'مسح كود الصنف', scanTitleOrder:'مسح رقم أمر التوريد', scanHint:'وجّه الكاميرا نحو الباركود أو كود QR',
-    toastNeedOrder:'من فضلك أدخل رقم أمر التوريد واسم المسؤول أولاً', toastAdded:'تم إضافة الصنف', toastEdited:'تم تعديل الصف بنجاح', editShelfPrompt:'عدّل كود الرف:', editGroupPrompt:'عدّل الجروب:', editGroupOption:'الجروب:', editWhatPrompt:'عايز تعدّل إيه؟', duplicateItemWarning:'الصنف ده مسجل بالفعل في نفس الرف — عايز تضيفه تاني؟',
+    toastNeedOrder:'من فضلك أدخل رقم أمر التوريد واسم المسؤول أولاً', toastAdded:'تم إضافة الصنف', toastEdited:'تم تعديل الصف بنجاح', editShelfPrompt:'عدّل كود الرف:', editGroupPrompt:'عدّل الجروب:', editGroupOption:'الجروب:', editWhatPrompt:'عايز تعدّل إيه؟', duplicateItemWarning:'الصنف ده مسجل بالفعل في نفس الرف — عايز تضيفه تاني؟', itemOnOtherShelfWarning:(shelf)=>`الصنف ده مسجل بالفعل تحت رف تاني "${shelf}" في نفس الأمر — عايز تضيفه هنا كمان؟`, errBarcodeCheckDigit:(code)=>`مرفوض: الكود "${code}" غير صحيح (خطأ في رقم التحقق) — امسحه تاني`,
     toastNeedGroup:'من فضلك اختر المجموعة أولاً', toastNeedShelf:'من فضلك امسح كود الرف أولاً', toastNeedItem:'من فضلك امسح كود الصنف أولاً', toastGroupListUnavailable:'قائمة المجموعات لسه مش متاحة', toastNeedShelfForGroup:'لازم تمسح رقم الرف أولاً قبل اختيار المجموعة',
     toastNoData:'لا يوجد بيانات لتصديرها بعد', toastExported:'تم تصدير الملف',
     askOpenFile:'تم تصدير الملف. عايز تفتحه دلوقتي عشان تشوف حاجة فيه؟',
@@ -612,8 +654,8 @@ const i18n = {
     errGeneric:'تعذّر تشغيل الكاميرا. تأكد من صلاحية الوصول.',
     csvHeaders:['Order Number','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time','Action Type'],
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
-    savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف',
-    menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
+    savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف', bulkChangeGroupBtn:'تغيير الجروب', confirmBulkDeleteEntries:(n)=>`متأكد إنك عايز تمسح ${n} صنف من السجل؟`, toastBulkGroupChanged:(n)=>`✅ اتغيّر الجروب لـ ${n} صنف`, toastBulkEntriesDeleted:(n)=>`✅ اتمسح ${n} صنف من السجل`,
+    menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuReports:'التقارير والإحصائيات', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر 30 يوم', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير — احفظ أمر توريد الأول', reportsTotalOrders:'إجمالي الأوامر', reportsTotalItems:'إجمالي الأصناف', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
     shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
@@ -636,11 +678,11 @@ const i18n = {
     groupLabel:'Group', groupPlaceholder:'-- Select group --',
     sectionScan:'Scan Codes', shelfLabel:'Shelf Code', itemLabel:'Item Code', notScanned:'Not scanned yet',
     scanShelfBtn:'📷 Scan Shelf', scanItemBtn:'📷 Scan Item', addBtn:'➕ Add Row',
-    manualItemBtn:'⌨️ Manual', manualPrompt:'Type the item code manually:', manualPromptGtin:'Type the GTIN manually:', manualShelfPrompt:'Type the shelf code manually:',
+    manualItemBtn:'⌨️ Manual', manualPrompt:'Type the item code manually:', manualPromptGtin:'Type the GTIN manually:', manualShelfPrompt:'Type the shelf code manually:', batchScanLabel:'Continuous scan mode — auto-adds each item and reopens the camera for the next one',
     sectionEntries:'Logged Entries', emptyState:'No items logged for this supply order yet', entriesSearchPh:'Search by shelf / group / item code', entriesNoMatch:'No matching entries', statsTotalItems:'Total items', statsNoGroup:'No group', searchFieldAll:'Search all fields', searchFieldShelf:'Shelf code only', searchFieldGroup:'Group only', searchFieldItem:'Item code only', searchFieldOrderNo:'Order number only', searchFieldName:'Name only', searchFieldDate:'Date only',
     exportBtn:'Export Excel', exportSub:'Excel file', sendBtn:'Share', sendSub:'Choose an app', pdfBtn:'Export PDF',
     scanTitleShelf:'Scan Shelf Code', scanTitleItem:'Scan Item Code', scanTitleOrder:'Scan Order Number', scanHint:'Point the camera at the barcode or QR code',
-    toastNeedOrder:'Please enter the order number and responsible name first', toastAdded:'Item added', toastEdited:'Row updated', editShelfPrompt:'Edit shelf code:', editGroupPrompt:'Edit group:', editGroupOption:'Group:', editWhatPrompt:'What would you like to edit?', duplicateItemWarning:'This item is already logged under this shelf — add it again anyway?',
+    toastNeedOrder:'Please enter the order number and responsible name first', toastAdded:'Item added', toastEdited:'Row updated', editShelfPrompt:'Edit shelf code:', editGroupPrompt:'Edit group:', editGroupOption:'Group:', editWhatPrompt:'What would you like to edit?', duplicateItemWarning:'This item is already logged under this shelf — add it again anyway?', itemOnOtherShelfWarning:(shelf)=>`This item is already logged under a different shelf "${shelf}" in this same order — add it here too?`, errBarcodeCheckDigit:(code)=>`Rejected: "${code}" has an invalid check digit — scan it again`,
     toastNeedGroup:'Please select the group first', toastNeedShelf:'Please scan the shelf code first', toastNeedItem:'Please scan the item code first', toastGroupListUnavailable:'Group list not available yet', toastNeedShelfForGroup:'Please scan the shelf number first before selecting a group',
     toastNoData:'No data to export yet', toastExported:'File exported',
     askOpenFile:'File exported. Would you like to open it now to check something?',
@@ -656,8 +698,8 @@ const i18n = {
     errGeneric:'Could not start the camera. Please check camera permission.',
     csvHeaders:['Order Number','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time','Action Type'],
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
-    savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete',
-    menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
+    savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete', bulkChangeGroupBtn:'Change group', confirmBulkDeleteEntries:(n)=>`Delete ${n} item(s) from the log?`, toastBulkGroupChanged:(n)=>`✅ Group changed for ${n} item(s)`, toastBulkEntriesDeleted:(n)=>`✅ Deleted ${n} item(s) from the log`,
+    menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuReports:'Reports & Stats', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last 30 days', reportsEmptyState:'Not enough data yet for a report — save a supply order first', reportsTotalOrders:'Total Orders', reportsTotalItems:'Total Items', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
     shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
@@ -681,6 +723,19 @@ const LANG_KEY = 'warehouseScannerLang';
 let theme = 'light';
 const THEME_KEY = 'warehouseScannerTheme';
 let entries = [];
+function generateEntryId(){
+  return 'e_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+// Older entries (from before multi-select existed) may not have an id yet —
+// assign one lazily whenever a whole entries array is loaded in bulk.
+function ensureEntryIds(){
+  entries.forEach(e => { if (!e.id) e.id = generateEntryId(); });
+}
+let batchScanMode = false;
+function toggleBatchScanMode(){
+  const cb = document.getElementById('batchScanToggle');
+  batchScanMode = !!(cb && cb.checked);
+}
 let scanTarget = null;
 // When >= 0, the next successful scan result is routed to editing
 // entries[editingEntryIndex] instead of the live scanning slot — see
@@ -1723,6 +1778,24 @@ function stopAmbientLightWatch(){
   try{ if (lightSensor){ lightSensor.stop(); lightSensor = null; } }catch(e){}
 }
 
+// Validates the check digit of a standard EAN-8/UPC-A(12)/EAN-13/GTIN-14
+// barcode using the GS1 algorithm. Codes that aren't a recognized numeric
+// barcode length (internal SKUs, alphanumeric codes, etc.) are left alone —
+// this only catches numeric barcodes with a bad check digit, which usually
+// means a camera misread or a manual typo.
+function isValidBarcodeCheckDigit(code){
+  if (!/^\d+$/.test(code)) return true;
+  if (![8, 12, 13, 14].includes(code.length)) return true;
+  const digits = code.split('').map(Number);
+  const checkDigit = digits.pop();
+  let sum = 0;
+  for (let i = digits.length - 1, weight = 3; i >= 0; i--, weight = (weight === 3 ? 1 : 3)){
+    sum += digits[i] * weight;
+  }
+  const expected = (10 - (sum % 10)) % 10;
+  return expected === checkDigit;
+}
+
 function extractItemCode(raw){
   // Some item barcodes append extra info after a separator (_, -, /, or \),
   // e.g. "2584786_12.26" or "3407447777-11078". Only the part before the
@@ -1746,6 +1819,21 @@ function resolveGtin(raw){
 
 function applyItemCode(rawText){
   const raw = extractItemCode(rawText.trim());
+
+  if (!isValidBarcodeCheckDigit(raw)){
+    currentItem = '';
+    currentItemName = '';
+    document.getElementById('valItem').textContent = t('notScanned');
+    document.getElementById('valItem').classList.add('empty');
+    document.getElementById('slotItem').classList.remove('filled');
+    const badDigitEl = document.getElementById('valItemName');
+    badDigitEl.textContent = t('errBarcodeCheckDigit')(raw);
+    badDigitEl.style.color = 'var(--red)';
+    badDigitEl.style.display = 'block';
+    updateAddBtn();
+    return false;
+  }
+
   // If this text matches a known GTIN, resolve it to its ItemCode first.
   // If items.csv has no GTIN column yet (gtinLookup empty) or the text
   // isn't a known GTIN, fall through and treat it as an ItemCode directly —
@@ -1922,7 +2010,7 @@ async function manualShelfEntry(){
   }
 }
 
-function onScanSuccess(text){
+async function onScanSuccess(text){
   // Editing an existing Logged Entries row (shelf or item) reuses this same
   // camera pipeline, but must never touch the live scanning slot (shelf/item
   // currently being scanned for a NEW row) — so it's routed separately here
@@ -1965,8 +2053,27 @@ function onScanSuccess(text){
     playErrorSound();
     toast(rejectMsg, 'error');
   }
+  const wasItemScan = (scanTarget === 'item');
   stopScan();
   updateAddBtn();
+
+  if (ok && wasItemScan && batchScanMode){
+    await runBatchScanStep();
+  }
+}
+
+// Continuous scanning mode: once a scanned item completes the row (shelf +
+// group already set), auto-add it and immediately reopen the camera for the
+// next item — no need to tap "Add" after every single scan. If a required
+// field is still missing (shouldn't normally happen once shelf+group are
+// set once), it just stops and lets the user add manually.
+async function runBatchScanStep(){
+  const btn = document.getElementById('addBtn');
+  if (!btn || !btn.classList.contains('ready')) return;
+  await addEntry();
+  if (batchScanMode){
+    startScan('item');
+  }
 }
 
 function stopScan(){
@@ -2117,6 +2224,7 @@ async function offerDraftRestore(){
   }
 
   entries = draft.entries;
+  ensureEntryIds();
   document.getElementById('actionType').value = draft.actionType || '';
   document.getElementById('orderNo').value = draft.orderNo || '';
   document.getElementById('orderNo').readOnly = (draft.actionType === 'edit');
@@ -2176,6 +2284,15 @@ async function addEntry(){
   if (isDuplicate){
     const proceed = await customConfirm(t('duplicateItemWarning'));
     if (!proceed) return;
+  } else {
+    // Also warn (separately) if this item was already logged under a
+    // DIFFERENT shelf in this same order — could be a real split, or could
+    // be a scanning mistake worth double-checking.
+    const otherShelfEntry = entries.find(e => e.item === currentItem && e.shelf !== currentShelf);
+    if (otherShelfEntry){
+      const proceed = await customConfirm(t('itemOnOtherShelfWarning')(otherShelfEntry.shelf));
+      if (!proceed) return;
+    }
   }
 
   const now = new Date();
@@ -2183,7 +2300,7 @@ async function addEntry(){
   const time = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   const group = getSelectedGroup();
 
-  entries.push({ orderNo, shelf: currentShelf, item: currentItem, itemName: currentItemName, groupNo: group.no, groupName: group.name, responsible, date, time, actionType });
+  entries.push({ id: generateEntryId(), orderNo, shelf: currentShelf, item: currentItem, itemName: currentItemName, groupNo: group.no, groupName: group.name, responsible, date, time, actionType });
 
   // Keep the shelf code locked in — only clear the item slot so the next
   // scan can add another item under the same shelf without rescanning it.
@@ -2263,12 +2380,104 @@ function toggleEntriesSearch(){
   }
 }
 
+let entriesSelectModeOn = false;
+let selectedEntryIds = new Set();
+
+function toggleEntrySelectMode(){
+  entriesSelectModeOn = !entriesSelectModeOn;
+  selectedEntryIds.clear();
+  const btn = document.getElementById('entriesSelectToggleBtn');
+  if (btn) btn.style.background = entriesSelectModeOn ? 'var(--overlay-press)' : 'none';
+  const row = document.getElementById('entriesSelectAllRow');
+  if (row) row.style.display = entriesSelectModeOn ? 'flex' : 'none';
+  renderEntries();
+}
+
+function getVisibleEntryIds(){
+  // Same shelf/group/item filter used by renderEntries(), so "select all"
+  // only ever selects what's actually visible on screen.
+  const searchEl = document.getElementById('entriesSearch');
+  const fieldEl = document.getElementById('entriesSearchField');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const field = fieldEl ? fieldEl.value : 'all';
+  if (!q) return entries.map(e => e.id);
+  return entries.filter(e => {
+    const parts =
+      field === 'shelf' ? [e.shelf] :
+      field === 'group' ? [e.groupNo, e.groupName] :
+      field === 'item'  ? [e.item, e.itemName] :
+      [e.shelf, e.groupNo, e.groupName, e.item, e.itemName];
+    const haystack = parts.filter(Boolean).join(' ');
+    return matchesQuery(haystack, q);
+  }).map(e => e.id);
+}
+
+function toggleSelectEntry(id){
+  if (selectedEntryIds.has(id)) selectedEntryIds.delete(id);
+  else selectedEntryIds.add(id);
+  updateEntriesSelectionUI();
+}
+
+function toggleSelectAllEntries(){
+  const checkbox = document.getElementById('selectAllEntries');
+  const visibleIds = getVisibleEntryIds();
+  if (checkbox.checked) visibleIds.forEach(id => selectedEntryIds.add(id));
+  else visibleIds.forEach(id => selectedEntryIds.delete(id));
+  renderEntries();
+}
+
+function updateEntriesSelectionUI(){
+  const visibleIds = getVisibleEntryIds();
+  const allSelected = document.getElementById('selectAllEntries');
+  if (allSelected) allSelected.checked = visibleIds.length > 0 && visibleIds.every(id => selectedEntryIds.has(id));
+  const bar = document.getElementById('entriesActionBar');
+  if (bar) bar.classList.toggle('show', selectedEntryIds.size > 0);
+  const countEl = document.getElementById('entriesSelectedCount');
+  if (countEl) countEl.textContent = selectedEntryIds.size > 0 ? String(selectedEntryIds.size) : '';
+}
+
+async function bulkDeleteEntries(){
+  if (selectedEntryIds.size === 0) return;
+  const proceed = await customConfirm(t('confirmBulkDeleteEntries')(selectedEntryIds.size));
+  if (!proceed) return;
+  entries = entries.filter(e => !selectedEntryIds.has(e.id));
+  const deletedCount = selectedEntryIds.size;
+  selectedEntryIds.clear();
+  renderEntries();
+  saveDraft();
+  playErrorSound();
+  toast(t('toastBulkEntriesDeleted')(deletedCount), 'success');
+}
+
+async function bulkChangeGroupForEntries(){
+  if (selectedEntryIds.size === 0) return;
+  if (!groupLookupLoaded) await loadGroupLookup(true);
+  if (!groupList.length){
+    toast(t('toastGroupListUnavailable'), 'warning');
+    return;
+  }
+  const options = groupList.map(g => ({ value: g.no, label: `${g.no} - ${g.name}` }));
+  const chosen = await customSelect(t('editGroupPrompt'), options, '');
+  if (chosen === null) return; // cancelled
+  const match = groupList.find(g => g.no === chosen);
+  const newGroupNo = match ? match.no : chosen;
+  const newGroupName = match ? match.name : '';
+  const affected = selectedEntryIds.size;
+  entries = entries.map(e => selectedEntryIds.has(e.id) ? { ...e, groupNo: newGroupNo, groupName: newGroupName } : e);
+  selectedEntryIds.clear();
+  renderEntries();
+  saveDraft();
+  playAddSound();
+  toast(t('toastBulkGroupChanged')(affected), 'success');
+}
+
 function renderEntries(){
   document.getElementById('countLbl').textContent = entries.length;
   renderStatsPanel();
   const list = document.getElementById('entriesList');
   if (entries.length === 0){
     list.innerHTML = `<div class="empty-state">${t('emptyState')}</div>`;
+    updateEntriesSelectionUI();
     return;
   }
 
@@ -2294,13 +2503,22 @@ function renderEntries(){
 
   if (filtered.length === 0){
     list.innerHTML = `<div class="empty-state">${t('entriesNoMatch')}</div>`;
+    updateEntriesSelectionUI();
     return;
   }
 
   list.innerHTML = filtered.map(({ e, i }, displayIdx) => {
     const groupText = (e.groupNo || e.groupName) ? [e.groupNo, e.groupName].filter(Boolean).join(' - ') : '';
+    const checkboxHtml = entriesSelectModeOn
+      ? `<input type="checkbox" ${selectedEntryIds.has(e.id) ? 'checked' : ''} onchange="toggleSelectEntry('${e.id}')">`
+      : '';
+    const actionsHtml = entriesSelectModeOn
+      ? ''
+      : `<button class="edit" onclick="editEntry(${i})">✏️</button>
+         <button class="del" onclick="deleteEntry(${i})">🗑</button>`;
     return `
     <div class="entry">
+      ${checkboxHtml}
       <div class="idx">${displayIdx+1}</div>
       <div class="info">
         <div class="codes">
@@ -2310,11 +2528,11 @@ function renderEntries(){
         </div>
         <div class="meta">${e.date} · ${e.time} · ${escapeHtml(e.responsible)}</div>
       </div>
-      <button class="edit" onclick="editEntry(${i})">✏️</button>
-      <button class="del" onclick="deleteEntry(${i})">🗑</button>
+      ${actionsHtml}
     </div>
   `;
   }).join('');
+  updateEntriesSelectionUI();
 }
 
 async function deleteEntry(i){
@@ -2442,6 +2660,11 @@ function applyEditedItem(i, rawItem){
   if (!e) return;
   const raw = extractItemCode(rawItem);
   if (!raw){ playErrorSound(); toast(t('toastNeedItem'), 'warning'); return; }
+  if (!isValidBarcodeCheckDigit(raw)){
+    playErrorSound();
+    toast(t('errBarcodeCheckDigit')(raw), 'error');
+    return;
+  }
   const resolvedItemCode = resolveGtin(raw);
   if (itemLookupLoaded && !itemLookup[resolvedItemCode]){
     playErrorSound();
@@ -2714,6 +2937,12 @@ async function confirmReset(){
   if (!proceed) return;
 
   entries = [];
+  entriesSelectModeOn = false;
+  selectedEntryIds.clear();
+  const selBtn = document.getElementById('entriesSelectToggleBtn');
+  if (selBtn) selBtn.style.background = 'none';
+  const selRow = document.getElementById('entriesSelectAllRow');
+  if (selRow) selRow.style.display = 'none';
   currentShelf = '';
   shelfDerivedGroupNo = '';
   currentItem = '';
@@ -2830,6 +3059,7 @@ function editSavedOrder(id){
   if (!order) return;
   editingOrderId = id;
   entries = JSON.parse(JSON.stringify(order.entries)); // edit a copy, not the stored reference
+  ensureEntryIds();
   // Older saved orders won't have an action type stored at all; infer it
   // from the entries if present, otherwise leave it blank so the user picks
   // explicitly (same "no action without a selection" rule as everywhere else).
@@ -3040,6 +3270,133 @@ async function deleteSelectedOrders(){
 
 // show the raw domain ("sysorapro.github.io says") as the title, which we
 // can't override. This shows our own title/message instead.
+// ---- Reports & Stats: aggregates across every SAVED order (the
+// in-progress, not-yet-saved order is intentionally excluded so nothing is
+// double-counted once it's saved) ----
+function getAllSavedEntries(){
+  return savedOrders.flatMap(o => o.entries);
+}
+
+// entries store dates as toLocaleDateString('en-GB') -> "DD/MM/YYYY"
+function parseEntryDateStr(dateStr){
+  const parts = (dateStr || '').split('/').map(Number);
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null;
+  const [d, m, y] = parts;
+  return new Date(y, m - 1, d);
+}
+
+function filterEntriesByRangeDays(allEntries, rangeDays){
+  if (!rangeDays) return allEntries; // 0/'' = all time
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - (rangeDays - 1));
+  return allEntries.filter(e => {
+    const d = parseEntryDateStr(e.date);
+    return d && d >= cutoff;
+  });
+}
+
+function buildReportData(rangeDays){
+  const filtered = filterEntriesByRangeDays(getAllSavedEntries(), rangeDays);
+
+  const byDay = {};
+  filtered.forEach(e => { byDay[e.date] = (byDay[e.date] || 0) + 1; });
+  const dayRows = Object.entries(byDay)
+    .sort((a, b) => (parseEntryDateStr(b[0]) || 0) - (parseEntryDateStr(a[0]) || 0))
+    .slice(0, 14);
+
+  const byMonth = {};
+  filtered.forEach(e => {
+    const d = parseEntryDateStr(e.date);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+  const monthRows = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+
+  const byItem = {};
+  filtered.forEach(e => {
+    if (!byItem[e.item]) byItem[e.item] = { code: e.item, name: e.itemName || '', count: 0 };
+    byItem[e.item].count++;
+  });
+  const topItems = Object.values(byItem).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  const byResp = {};
+  filtered.forEach(e => {
+    const key = e.responsible || '—';
+    if (!byResp[key]) byResp[key] = { name: key, items: 0, orders: new Set() };
+    byResp[key].items++;
+    byResp[key].orders.add(e.orderNo);
+  });
+  const respRows = Object.values(byResp)
+    .map(r => ({ name: r.name, items: r.items, orders: r.orders.size }))
+    .sort((a, b) => b.items - a.items);
+
+  const totalOrders = new Set(filtered.map(e => e.orderNo)).size;
+  return { dayRows, monthRows, topItems, respRows, totalOrders, totalItems: filtered.length };
+}
+
+function reportSectionHtml(title, rows){
+  if (!rows.length) return '';
+  const rowsHtml = rows.map(([label, count]) => `
+    <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); font-size:12.5px;">
+      <span style="color:var(--text);">${escapeHtml(label)}</span>
+      <span style="color:var(--muted); font-weight:700;">${count}</span>
+    </div>`).join('');
+  return `
+    <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
+      <div style="font-weight:800; font-size:13px; color:var(--text); margin-bottom:6px;">${escapeHtml(title)}</div>
+      ${rowsHtml}
+    </div>`;
+}
+
+function openReports(){
+  document.getElementById('reportsModal').classList.add('open');
+  renderReports();
+}
+function closeReports(){
+  document.getElementById('reportsModal').classList.remove('open');
+}
+
+function renderReports(){
+  const body = document.getElementById('reportsBody');
+  if (!savedOrders.length){
+    body.innerHTML = `<div class="empty-state" style="margin-top:10px;">${t('reportsEmptyState')}</div>`;
+    return;
+  }
+  const rangeDays = Number(document.getElementById('reportsRangeSelect').value) || 0;
+  const data = buildReportData(rangeDays);
+  if (data.totalItems === 0){
+    body.innerHTML = `<div class="empty-state" style="margin-top:10px;">${t('reportsEmptyState')}</div>`;
+    return;
+  }
+
+  const totalsHtml = `
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center;">
+        <div style="font-size:20px; font-weight:800; color:var(--amber-fg);">${data.totalOrders}</div>
+        <div style="font-size:11.5px; color:var(--muted);">${t('reportsTotalOrders')}</div>
+      </div>
+      <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center;">
+        <div style="font-size:20px; font-weight:800; color:var(--mint-fg);">${data.totalItems}</div>
+        <div style="font-size:11.5px; color:var(--muted);">${t('reportsTotalItems')}</div>
+      </div>
+    </div>`;
+
+  const dayHtml = reportSectionHtml(t('reportsByDay'), data.dayRows);
+  const monthHtml = reportSectionHtml(t('reportsByMonth'), data.monthRows);
+  const topItemsHtml = reportSectionHtml(
+    t('reportsTopItems'),
+    data.topItems.map(it => [it.name ? `${it.code} - ${it.name}` : it.code, it.count])
+  );
+  const respHtml = reportSectionHtml(
+    t('reportsByResponsible'),
+    data.respRows.map(r => [r.name, `${r.items} ${t('itemsUnit')} · ${r.orders} ${t('ordersUnit')}`])
+  );
+
+  body.innerHTML = totalsHtml + dayHtml + monthHtml + topItemsHtml + respHtml;
+}
+
 function customDialog(message, isPrompt, defaultValue, suggestions){
   return new Promise((resolve) => {
     const bg = document.getElementById('customDialogBg');
