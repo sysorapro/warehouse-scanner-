@@ -186,6 +186,8 @@
   .entries-actionbar button{ flex:1; border:none; border-radius:11px; padding:10px 6px; font-family:'Cairo'; font-weight:800; font-size:12px; }
   .entries-actionbar .eab-group{ background:var(--amber); color:#1a1204; }
   .entries-actionbar .eab-delete{ background:var(--red); color:#fff; }
+  #reportsCustomRange.show{ display:flex; }
+  .report-rows-scroll{ max-height:260px; overflow-y:auto; }
   .empty-state{ text-align:center; padding:22px 10px; color:var(--muted); font-size:13px; }
 
   .topactions{ display:flex; gap:10px; padding:0 18px; }
@@ -281,7 +283,6 @@
   <div class="mark splash-mark" id="splashMark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="splash-title" id="splashTitle">Warehouse Scanner</div>
   <div class="splash-credit">Developed by <b>Sysora</b></div>
-  <div class="splash-credit">V5.2 © 2026</div>
 </div>
 <script>
   (function(){
@@ -456,7 +457,7 @@
       </div>
     </div>
 
-  <div class="credit">Developed by <b>SYSORA</b> V5.2 © 2026</div>
+    <div class="credit">Developed by <b>Sysora</b></div>
 
   </div>
 </div>
@@ -552,11 +553,16 @@
     <span style="width:34px;"></span>
   </div>
   <div style="padding:10px 14px 0;">
-    <select id="reportsRangeSelect" onchange="renderReports()">
-      <option value="0" data-i18n="reportsRangeAll">كل الفترات</option>
+    <select id="reportsRangeSelect" onchange="onReportsRangeChange()">
+      <option value="all" data-i18n="reportsRangeAll">كل الفترات</option>
       <option value="7" data-i18n="reportsRange7">آخر 7 أيام</option>
-      <option value="30" data-i18n="reportsRange30">آخر 30 يوم</option>
+      <option value="30" data-i18n="reportsRange30">آخر شهر</option>
+      <option value="custom" data-i18n="reportsRangeCustom">فترة محددة (من - إلى)</option>
     </select>
+    <div id="reportsCustomRange" style="display:none; gap:8px; margin-top:8px;">
+      <input type="date" id="reportsFromDate" onchange="renderReports()" style="flex:1;">
+      <input type="date" id="reportsToDate" onchange="renderReports()" style="flex:1;">
+    </div>
   </div>
   <div style="flex:1; overflow-y:auto; padding:4px 14px 14px;" id="reportsBody"></div>
 </div>
@@ -656,7 +662,7 @@ const i18n = {
     csvHeaders:['Order Number','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time','Action Type'],
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف', bulkChangeGroupBtn:'تغيير الجروب', confirmBulkDeleteEntries:(n)=>`متأكد إنك عايز تمسح ${n} صنف من السجل؟`, toastBulkGroupChanged:(n)=>`✅ اتغيّر الجروب لـ ${n} صنف`, toastBulkEntriesDeleted:(n)=>`✅ اتمسح ${n} صنف من السجل`,
-    menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuReports:'التقارير والإحصائيات', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر 30 يوم', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
+    menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuReports:'التقارير والإحصائيات', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر شهر', reportsRangeCustom:'فترة محددة (من - إلى)', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalDraft:'إجمالي قيد التنفيذ', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
     shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
@@ -700,7 +706,7 @@ const i18n = {
     csvHeaders:['Order Number','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time','Action Type'],
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete', bulkChangeGroupBtn:'Change group', confirmBulkDeleteEntries:(n)=>`Delete ${n} item(s) from the log?`, toastBulkGroupChanged:(n)=>`✅ Group changed for ${n} item(s)`, toastBulkEntriesDeleted:(n)=>`✅ Deleted ${n} item(s) from the log`,
-    menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuReports:'Reports & Stats', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last 30 days', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
+    menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuReports:'Reports & Stats', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last month', reportsRangeCustom:'Custom range (from - to)', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalDraft:'Total In Progress', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
     shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
@@ -3322,25 +3328,47 @@ function getAllReportableEntries(){
   return [...savedRows, ...uploadedRows, ...draftRows];
 }
 
-function filterEntriesByRangeDays(allEntries, rangeDays){
-  if (!rangeDays) return allEntries; // 0/'' = all time
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
-  cutoff.setDate(cutoff.getDate() - (rangeDays - 1));
+function getSelectedReportRange(){
+  const sel = document.getElementById('reportsRangeSelect').value;
+  if (sel === 'custom'){
+    const from = document.getElementById('reportsFromDate').value || null;
+    const to = document.getElementById('reportsToDate').value || null;
+    return { type: 'custom', from, to };
+  }
+  if (sel === 'all') return { type: 'all' };
+  return { type: 'days', days: Number(sel) };
+}
+
+function filterEntriesByRange(allEntries, range){
+  if (range.type === 'all') return allEntries;
+  if (range.type === 'days'){
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - (range.days - 1));
+    return allEntries.filter(e => {
+      const d = parseEntryDateStr(e.date);
+      return d && d >= cutoff;
+    });
+  }
+  // custom from/to (either side may be left open)
+  const fromDate = range.from ? new Date(range.from + 'T00:00:00') : null;
+  const toDate = range.to ? new Date(range.to + 'T23:59:59') : null;
   return allEntries.filter(e => {
     const d = parseEntryDateStr(e.date);
-    return d && d >= cutoff;
+    if (!d) return false;
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    return true;
   });
 }
 
-function buildReportData(rangeDays){
-  const filtered = filterEntriesByRangeDays(getAllReportableEntries(), rangeDays);
+function buildReportData(range){
+  const filtered = filterEntriesByRange(getAllReportableEntries(), range);
 
   const byDay = {};
   filtered.forEach(e => { if (e.date) byDay[e.date] = (byDay[e.date] || 0) + 1; });
   const dayRows = Object.entries(byDay)
-    .sort((a, b) => (parseEntryDateStr(b[0]) || 0) - (parseEntryDateStr(a[0]) || 0))
-    .slice(0, 14);
+    .sort((a, b) => (parseEntryDateStr(b[0]) || 0) - (parseEntryDateStr(a[0]) || 0));
 
   const byMonth = {};
   filtered.forEach(e => {
@@ -3356,8 +3384,13 @@ function buildReportData(rangeDays){
     if (!byItem[e.item]) byItem[e.item] = { code: e.item, name: e.itemName || '', count: 0 };
     byItem[e.item].count++;
   });
-  const topItems = Object.values(byItem).sort((a, b) => b.count - a.count).slice(0, 10);
+  const topItems = Object.values(byItem).sort((a, b) => b.count - a.count);
 
+  // Performance by responsible — aggregated across ALL operation types
+  // (saved orders + in-progress/draft), for whichever entries actually
+  // carry a responsible name. Uploaded Item↔Shelf Link sheets don't
+  // collect a responsible name at scan time, so they can't be attributed
+  // to a person here — that's a data-availability gap, not a filter.
   const byResp = {};
   filtered.filter(e => e.responsible).forEach(e => {
     const key = e.responsible;
@@ -3377,7 +3410,8 @@ function buildReportData(rangeDays){
 
   const totalOrders = new Set(filtered.filter(e => e.sourceType !== 'uploaded').map(e => e.orderNo)).size;
   const totalSheets = new Set(filtered.filter(e => e.sourceType === 'uploaded').map(e => e.sourceLabel)).size;
-  return { dayRows, monthRows, topItems, respRows, typeRows, totalOrders, totalSheets, totalItems: filtered.length };
+  const totalDraftItems = byType.draft || 0;
+  return { dayRows, monthRows, topItems, respRows, typeRows, totalOrders, totalSheets, totalDraftItems, totalItems: filtered.length };
 }
 
 function reportSectionHtml(title, rows){
@@ -3387,11 +3421,19 @@ function reportSectionHtml(title, rows){
       <span style="color:var(--text);">${escapeHtml(label)}</span>
       <span style="color:var(--muted); font-weight:700;">${count}</span>
     </div>`).join('');
+  // Capped visible height (~10 rows) — anything beyond that scrolls
+  // instead of pushing the rest of the report down.
   return `
     <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
       <div style="font-weight:800; font-size:13px; color:var(--text); margin-bottom:6px;">${escapeHtml(title)}</div>
-      ${rowsHtml}
+      <div class="report-rows-scroll">${rowsHtml}</div>
     </div>`;
+}
+
+function onReportsRangeChange(){
+  const sel = document.getElementById('reportsRangeSelect').value;
+  document.getElementById('reportsCustomRange').classList.toggle('show', sel === 'custom');
+  renderReports();
 }
 
 function openReports(){
@@ -3404,24 +3446,28 @@ function closeReports(){
 
 function renderReports(){
   const body = document.getElementById('reportsBody');
-  const rangeDays = Number(document.getElementById('reportsRangeSelect').value) || 0;
-  const data = buildReportData(rangeDays);
+  const range = getSelectedReportRange();
+  const data = buildReportData(range);
   if (data.totalItems === 0){
     body.innerHTML = `<div class="empty-state" style="margin-top:10px;">${t('reportsEmptyState')}</div>`;
     return;
   }
 
   const totalsHtml = `
-    <div style="display:flex; gap:8px; margin-bottom:12px;">
-      <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
         <div style="font-size:18px; font-weight:800; color:var(--amber-fg);">${data.totalOrders}</div>
         <div style="font-size:11px; color:var(--muted);">${t('reportsTotalOrders')}</div>
       </div>
-      <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
         <div style="font-size:18px; font-weight:800; color:#8FB8FF;">${data.totalSheets}</div>
         <div style="font-size:11px; color:var(--muted);">${t('reportsTotalSheets')}</div>
       </div>
-      <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
+        <div style="font-size:18px; font-weight:800; color:#FFB37A;">${data.totalDraftItems}</div>
+        <div style="font-size:11px; color:var(--muted);">${t('reportsTotalDraft')}</div>
+      </div>
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center;">
         <div style="font-size:18px; font-weight:800; color:var(--mint-fg);">${data.totalItems}</div>
         <div style="font-size:11px; color:var(--muted);">${t('reportsTotalItems')}</div>
       </div>
