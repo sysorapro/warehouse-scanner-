@@ -531,7 +531,7 @@
   <div class="modal-top">
     <button onclick="backToShelfLinkSheets()">‹</button>
     <span id="shelfLinkSheetTitle" data-i18n="shelfLinkTitle">ربط أصناف بالأرفف</span>
-    <span style="width:34px;"></span>
+    <button onclick="editShelfLinkSheetResponsible()" title="Responsible">👤</button>
   </div>
   <div class="orders-toolbar" style="display:flex; align-items:center; justify-content:space-between;">
     <span id="shelfLinkCountLabel" style="font-size:12px;color:var(--muted);"></span>
@@ -663,7 +663,7 @@ const i18n = {
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف', bulkChangeGroupBtn:'تغيير الجروب', confirmBulkDeleteEntries:(n)=>`متأكد إنك عايز تمسح ${n} صنف من السجل؟`, toastBulkGroupChanged:(n)=>`✅ اتغيّر الجروب لـ ${n} صنف`, toastBulkEntriesDeleted:(n)=>`✅ اتمسح ${n} صنف من السجل`,
     menuSound:'الصوت', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ربط أصناف بالأرفف', menuReports:'التقارير والإحصائيات', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر شهر', reportsRangeCustom:'فترة محددة (من - إلى)', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalDraft:'إجمالي قيد التنفيذ', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
-    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
+    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', shelfLinkResponsiblePrompt:'اسم المسؤول عن مسح الشيت ده (اختياري):', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
     confirmCombineExport:'هل تريد دمج الأوامر المختارة في ملف Excel واحد؟\n(إلغاء = ملف منفصل لكل أمر)',
@@ -707,7 +707,7 @@ const i18n = {
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete', bulkChangeGroupBtn:'Change group', confirmBulkDeleteEntries:(n)=>`Delete ${n} item(s) from the log?`, toastBulkGroupChanged:(n)=>`✅ Group changed for ${n} item(s)`, toastBulkEntriesDeleted:(n)=>`✅ Deleted ${n} item(s) from the log`,
     menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Link Items to Shelves', menuReports:'Reports & Stats', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last month', reportsRangeCustom:'Custom range (from - to)', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalDraft:'Total In Progress', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
-    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
+    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', shelfLinkResponsiblePrompt:'Name of the person scanning this sheet (optional):', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
     confirmCombineExport:'Combine the selected orders into one Excel file?\n(Cancel = a separate file per order)',
@@ -835,6 +835,16 @@ function openShelfLinkSheet(id){
   document.getElementById('shelfLinkSheetsModal').classList.remove('open');
   document.getElementById('shelfLinkModal').classList.add('open');
 }
+
+async function editShelfLinkSheetResponsible(){
+  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
+  if (!sheet) return;
+  const name = await customPrompt(t('shelfLinkResponsiblePrompt'), sheet.responsible || '');
+  if (name === null) return; // cancelled
+  sheet.responsible = name.trim();
+  saveShelfLinkSheets();
+  renderShelfLinkList();
+}
 function backToShelfLinkSheets(){
   document.getElementById('shelfLinkModal').classList.remove('open');
   currentShelfLinkSheetId = null;
@@ -868,7 +878,9 @@ async function handleShelfLinkFileUpload(event){
     const defaultName = (lang === 'ar' ? 'شيت ' : 'Sheet ') + (shelfLinkSheets.length + 1);
     const name = await customPrompt(t('shelfLinkNamePrompt'), defaultName);
     if (name === null) return; // cancelled
-    shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: name.trim() || defaultName, rows });
+    const responsible = await customPrompt(t('shelfLinkResponsiblePrompt'), '');
+    if (responsible === null) return; // cancelled
+    shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: name.trim() || defaultName, responsible: responsible.trim(), rows });
     saveShelfLinkSheets();
     renderShelfLinkSheetsList();
     toast(t('toastShelfLinkUploaded', rows.length), 'success');
@@ -933,7 +945,7 @@ function renderShelfLinkSheetsList(){
     <div class="order-card" onclick="openShelfLinkSheet('${s.id}')" style="cursor:pointer;">
       <div style="flex:1; min-width:0;">
         <div style="font-weight:800; font-family:'Cairo'; font-size:14px; color:var(--text);">${escapeHtml(s.name)}</div>
-        <div style="font-size:12px; color:var(--muted); margin-top:3px;">${scannedCount} / ${s.rows.length} ${t('itemsUnit')}</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:3px;">${scannedCount} / ${s.rows.length} ${t('itemsUnit')}${s.responsible ? ' · ' + escapeHtml(s.responsible) : ''}</div>
       </div>
       <button onclick="event.stopPropagation(); deleteShelfLinkSheet('${s.id}')" style="background:none; border:none; color:var(--red); font-size:16px; padding:6px; flex-shrink:0;">🗑</button>
     </div>`;
@@ -943,7 +955,9 @@ function renderShelfLinkSheetsList(){
 function renderShelfLinkList(){
   const countLabel = document.getElementById('shelfLinkCountLabel');
   const scannedCount = shelfLinkList.filter(r => r.shelf).length;
-  countLabel.textContent = shelfLinkList.length ? `${scannedCount} / ${shelfLinkList.length} ${t('itemsUnit')}` : '';
+  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
+  const respSuffix = sheet && sheet.responsible ? ' · ' + sheet.responsible : '';
+  countLabel.textContent = shelfLinkList.length ? `${scannedCount} / ${shelfLinkList.length} ${t('itemsUnit')}${respSuffix}` : '';
   const listEl = document.getElementById('shelfLinkListEl');
   if (!shelfLinkList.length){
     listEl.innerHTML = `<div class="empty-state" style="margin:18px;">${t('shelfLinkEmptyState')}</div>`;
@@ -3306,12 +3320,13 @@ function getAllReportableEntries(){
   );
 
   // 2) Uploaded Item↔Shelf Link sheets — only rows that were actually
-  // scanned (have a shelf) count as completed work.
+  // scanned (have a shelf) count as completed work. Attributed to whoever
+  // is set as the sheet's responsible person, if one was set.
   const uploadedRows = shelfLinkSheets.flatMap(s =>
     s.rows.filter(r => r.shelf).map(r => ({
       item: r.itemCode, itemName: r.itemName, shelf: r.shelf,
       groupNo: r.groupNo, groupName: r.groupName,
-      responsible: '', orderNo: s.name,
+      responsible: s.responsible || '', orderNo: s.name,
       date: r.scanDate || '', time: r.scanTime || '',
       sourceType: 'uploaded', sourceLabel: s.name
     }))
@@ -3437,6 +3452,11 @@ function onReportsRangeChange(){
 }
 
 function openReports(){
+  // Reports read shelfLinkSheets directly, but that data is only loaded
+  // lazily when the Item↔Shelf Link screen is opened — load it here too so
+  // uploaded-sheet stats show up even if that screen was never visited
+  // this session.
+  if (!shelfLinkSheetsLoaded){ loadShelfLinkSheetsFromStorage(); shelfLinkSheetsLoaded = true; }
   document.getElementById('reportsModal').classList.add('open');
   renderReports();
 }
