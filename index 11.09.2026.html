@@ -874,7 +874,7 @@ function loadShelfLinkSheetsFromStorage(){
 const FILE_UPLOAD_URL = 'https://raw.githubusercontent.com/sysorapro/warehouse-scanner-/main/FileUploade.csv';
 // Secure write endpoint: Cloudflare Worker keeps the GitHub token server-side.
 // Replace this after deploying the Worker.
-const FILE_UPLOAD_WRITE_API = 'https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev';
+const FILE_UPLOAD_WRITE_API = 'https://warehouse-fileupload-github-api.sysora-pro.workers.dev';
 const FILE_UPLOAD_FIREBASE_CONFIG = {apiKey:'',authDomain:'',projectId:'',storageBucket:'',messagingSenderId:'',appId:''};
 const FILE_UPLOAD_LOCK_TTL = 2 * 60 * 1000;
 const FILE_UPLOAD_STATE_KEY = 'warehouseScannerFileUploadState';
