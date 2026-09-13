@@ -696,7 +696,7 @@ window.DATA_GITHUB_CONFIG = {
     <span data-i18n="shelfLinkTitle">ربط أصناف بالأرفف</span>
     <button onclick="triggerShelfLinkUpload()" title="Upload">📁</button>
   </div>
-  <input type="file" id="shelfLinkFileInput" accept=".csv,text/csv" style="display:none;" onchange="handleShelfLinkFileUpload(event)">
+  <input type="file" id="shelfLinkFileInput" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;" onchange="handleShelfLinkFileUpload(event)">
   <div style="flex:1; overflow-y:auto;" id="shelfLinkSheetsListEl"></div>
 </div>
 
@@ -862,7 +862,7 @@ const i18n = {
     entryLabelShelf:'رف:', entryLabelItem:'صنف:', entryLabelGroup:'مجموعة:',
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف', bulkChangeGroupBtn:'تغيير الجروب', confirmBulkDeleteEntries:(n)=>`متأكد إنك عايز تمسح ${n} صنف من السجل؟`, toastBulkGroupChanged:(n)=>`✅ اتغيّر الجروب لـ ${n} صنف`, toastBulkEntriesDeleted:(n)=>`✅ اتمسح ${n} صنف من السجل`,
     menuSound:'الصوت', menuLogout:'تسجيل الخروج', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'ملف خاص (إضافة)', menuFileUpload:'ملف عام (رفع)', fileUploadScanned:'تم المسح', menuReports:'التقارير والإحصائيات', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر شهر', reportsRangeCustom:'فترة محددة (من - إلى)', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalDraft:'إجمالي قيد التنفيذ', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncingNow:'جاري تحديث البيانات...', syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
-    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', shelfLinkResponsiblePrompt:'اسم المسؤول عن مسح الشيت ده (اختياري):', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', confirmMoveFileUploadToPrivate:'هل أنت متأكد من نقل هذا الملف؟ سيتم نقل الملف إلى ملف خاص وحذفه من ملف عام. لا يمكن التراجع عن هذا الإجراء.', toastMoveToPrivateSuccess:'✅ تم نقل الملف إلى ملف خاص بنجاح', toastMoveToPrivateFail:'❌ تعذر نقل الملف إلى ملف خاص', toastMoveToPrivateDuplicate:'يوجد ملف خاص بنفس الاسم بالفعل', toastMoveToPrivateNoInternet:'لا يوجد اتصال بالإنترنت', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
+    shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', shelfLinkResponsiblePrompt:'اسم المسؤول يتم أخذه تلقائيًا من Employee Name للمستخدم الحالي:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', confirmMoveFileUploadToPrivate:'هل أنت متأكد من نقل هذا الملف؟ سيتم نقل الملف إلى ملف خاص وحذفه من ملف عام. لا يمكن التراجع عن هذا الإجراء.', toastMoveToPrivateSuccess:'✅ تم نقل الملف إلى ملف خاص بنجاح', toastMoveToPrivateFail:'❌ تعذر نقل الملف إلى ملف خاص', toastMoveToPrivateDuplicate:'يوجد ملف خاص بنفس الاسم بالفعل', toastMoveToPrivateNoInternet:'لا يوجد اتصال بالإنترنت', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
     confirmCombineExport:'هل تريد دمج الأوامر المختارة في ملف Excel واحد؟\n(إلغاء = ملف منفصل لكل أمر)',
@@ -906,7 +906,7 @@ const i18n = {
     entryLabelShelf:'Shelf:', entryLabelItem:'Item:', entryLabelGroup:'Group:',
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete', bulkChangeGroupBtn:'Change group', confirmBulkDeleteEntries:(n)=>`Delete ${n} item(s) from the log?`, toastBulkGroupChanged:(n)=>`✅ Group changed for ${n} item(s)`, toastBulkEntriesDeleted:(n)=>`✅ Deleted ${n} item(s) from the log`,
     menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Private File (Add)', menuFileUpload:'Public File (Upload)', fileUploadScanned:'Scanned', menuReports:'Reports & Stats', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last month', reportsRangeCustom:'Custom range (from - to)', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalDraft:'Total In Progress', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncingNow:'Syncing data...', syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
-    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', shelfLinkResponsiblePrompt:'Name of the person scanning this sheet (optional):', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', confirmMoveFileUploadToPrivate:'Are you sure you want to transfer this file? The file will be moved to Private File and deleted from Public File. This action cannot be undone.', toastMoveToPrivateSuccess:'✅ File moved to Private File successfully', toastMoveToPrivateFail:'❌ Unable to move file to Private File', toastMoveToPrivateDuplicate:'A private file with the same name already exists', toastMoveToPrivateNoInternet:'No internet connection', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
+    shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', shelfLinkResponsiblePrompt:'Responsible Name is taken automatically from the current user Employee Name:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', confirmMoveFileUploadToPrivate:'Are you sure you want to transfer this file? The file will be moved to Private File and deleted from Public File. This action cannot be undone.', toastMoveToPrivateSuccess:'✅ File moved to Private File successfully', toastMoveToPrivateFail:'❌ Unable to move file to Private File', toastMoveToPrivateDuplicate:'A private file with the same name already exists', toastMoveToPrivateNoInternet:'No internet connection', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
     confirmCombineExport:'Combine the selected orders into one Excel file?\n(Cancel = a separate file per order)',
@@ -2029,13 +2029,17 @@ function openShelfLinkSheet(id){
 }
 
 async function editShelfLinkSheetResponsible(){
-  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
-  if (!sheet) return;
-  const name = await customPrompt(t('shelfLinkResponsiblePrompt'), sheet.responsible || '');
-  if (name === null) return; // cancelled
-  sheet.responsible = name.trim();
+  const sheet=getShelfLinkSheet(currentShelfLinkSheetId);
+  if(!sheet) return;
+  const responsible=String(currentAuthenticatedUser?.employeeName || currentAuthenticatedUser?.username || '').trim();
+  if(!responsible){
+    toast(lang==='ar'?'تعذر تحديد اسم الموظف الحالي':'Unable to determine the current user name','warning');
+    return;
+  }
+  sheet.responsible=responsible;
   saveShelfLinkSheets();
   renderShelfLinkList();
+  renderShelfLinkSheetsList();
 }
 function backToShelfLinkSheets(){
   document.getElementById('shelfLinkModal').classList.remove('open');
@@ -2058,26 +2062,73 @@ function triggerShelfLinkUpload(){
 
 async function handleShelfLinkFileUpload(event){
   const file = event.target.files[0];
-  event.target.value = ''; // reset so re-selecting the same file still fires change next time
+  event.target.value = '';
   if (!file) return;
   try{
-    const text = await file.text();
-    const rows = parseShelfLinkUploadCSV(text);
-    if (!rows.length){
-      toast(t('errShelfLinkEmptyFile'), 'warning');
-      return;
+    const ext = String(file.name||'').split('.').pop().toLowerCase();
+    let rows = [];
+
+    if (ext === 'xlsx' || ext === 'xls'){
+      if (typeof XLSX === 'undefined'){
+        toast(lang==='ar' ? 'مكتبة Excel لسه بتتحمّل، حاول تاني بعد ثانيتين' : 'Excel library is still loading, try again in a moment', 'warning');
+        return;
+      }
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, {type:'array', cellDates:false});
+      const firstSheetName = wb.SheetNames && wb.SheetNames[0];
+      if (!firstSheetName){ toast(t('errShelfLinkEmptyFile'),'warning'); return; }
+      const ws = wb.Sheets[firstSheetName];
+      const aoa = XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+      if (!aoa.length){ toast(t('errShelfLinkEmptyFile'),'warning'); return; }
+
+      const first = (aoa[0]||[]).map(v=>String(v??'').trim());
+      const norm = v=>String(v??'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+      const headerNorm = first.map(norm);
+      const hasHeader = headerNorm.some(v=>['itemcode','code','itemnumber','itemno','itemname','name','description'].includes(v));
+      let startRow = hasHeader ? 1 : 0;
+      let codeIdx = 0, nameIdx = 1;
+      if(hasHeader){
+        const ci=headerNorm.findIndex(v=>['itemcode','code','itemnumber','itemno'].includes(v));
+        const ni=headerNorm.findIndex(v=>['itemname','name','description'].includes(v));
+        if(ci>=0) codeIdx=ci;
+        if(ni>=0) nameIdx=ni;
+      }
+      for(let i=startRow;i<aoa.length;i++){
+        const r=aoa[i]||[];
+        const itemCode=String(r[codeIdx]??'').trim();
+        const itemName=String(r[nameIdx]??'').trim();
+        if(itemCode||itemName) rows.push(makeEmptyShelfLinkRow(itemCode,itemName));
+      }
+    }else{
+      rows = parseShelfLinkUploadCSV(await file.text());
     }
-    const defaultName = (lang === 'ar' ? 'شيت ' : 'Sheet ') + (shelfLinkSheets.length + 1);
-    const name = await customPrompt(t('shelfLinkNamePrompt'), defaultName);
-    if (name === null) return; // cancelled
-    const responsible = await customPrompt(t('shelfLinkResponsiblePrompt'), '');
-    if (responsible === null) return; // cancelled
-    shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: name.trim() || defaultName, responsible: responsible.trim(), rows });
+
+    if(!rows.length){ toast(t('errShelfLinkEmptyFile'),'warning'); return; }
+
+    const defaultName=(lang==='ar'?'شيت ':'Sheet ')+(shelfLinkSheets.length+1);
+    const name=await customPrompt(t('shelfLinkNamePrompt'),defaultName);
+    if(name===null) return;
+
+    // Responsible Name is automatic: prefer Employee Name, with Username as fallback.
+    const responsible=String(currentAuthenticatedUser?.employeeName || currentAuthenticatedUser?.username || '').trim();
+
+    shelfLinkSheets.push({
+      id:generateShelfLinkSheetId(),
+      name:name.trim()||defaultName,
+      responsible,
+      rows
+    });
     saveShelfLinkSheets();
     renderShelfLinkSheetsList();
-    toast(t('toastShelfLinkUploaded', rows.length), 'success');
+    toast(t('toastShelfLinkUploaded',rows.length),'success');
   }catch(e){
-    toast(t('errShelfLinkEmptyFile'), 'warning');
+    console.error('Private File import error:',e);
+    toast(
+      lang==='ar'
+        ? 'تعذر استيراد الملف. استخدم CSV أو Excel بصيغة XLSX/XLS وتأكد أن الملف يحتوي على كود الصنف واسم الصنف.'
+        : 'Unable to import the file. Use CSV or Excel (XLSX/XLS) with Item Code and Item Name.',
+      'warning'
+    );
   }
 }
 
@@ -5239,6 +5290,13 @@ function updateLoginRememberLabel(){
   const el=document.getElementById('loginRememberLabel'); if(el)el.textContent=lang==='ar'?'حفظ بيانات الدخول':'Remember login';
 }
 
+function showInactiveLoginMessage(){
+  const msg=lang==='ar'
+    ? 'هذا المستخدم غير نشط ولا يُسمح له بتسجيل الدخول.'
+    : 'This user is inactive and is not allowed to sign in.';
+  setLoginError(msg);
+  return msg;
+}
 function setLoginError(msg){
   const el=document.getElementById('loginError');
   if(el)el.textContent=msg||'';
@@ -5348,7 +5406,7 @@ async function tryOfflineLogin(username,password){
     const u=JSON.parse(raw);
     if(!u||String(u.username||'').trim().toLowerCase()!==String(username||'').trim().toLowerCase())return false;
     if(String(u.status||'').trim().toLowerCase()!=='active'){
-      setLoginError(usersLoginText('inactive'));
+      showInactiveLoginMessage();
       return false;
     }
     const hash=await hashLoginPassword(password);if(hash!==String(u.passwordHash||''))return false;
@@ -5384,7 +5442,7 @@ async function performLogin(){
     const users=parseUsersCSV(await loadUsersCSV());
     const found=users.find(u=>String(u.username).trim().toLowerCase()===username.toLowerCase());
     if(!found||String(found.password)!==password){playErrorSound();setLoginError(usersLoginText('invalid'));return;}
-    if(String(found.status||'').trim().toLowerCase()!=='active'){playErrorSound();setLoginError(usersLoginText('inactive'));return;}
+    if(String(found.status||'').trim().toLowerCase()!=='active'){playErrorSound();showInactiveLoginMessage();return;}
     await saveAuthenticatedUser(found,password);
     if(String(password)==='00000'){showPasswordChangeGate(found);return;}
     playScanSuccessSound();hideLoginGate();
@@ -5397,7 +5455,12 @@ async function performLogin(){
 }
 
 function toggleLoginLanguage(){
+  const oldLoginError=String(document.getElementById('loginError')?.textContent||'').trim();
   lang=lang==='ar'?'en':'ar';
+  if(oldLoginError==='هذا المستخدم غير نشط ولا يُسمح له بتسجيل الدخول.' ||
+     oldLoginError==='This user is inactive and is not allowed to sign in.'){
+    showInactiveLoginMessage();
+  }
   try{localStorage.setItem(LANG_KEY,lang);}catch(e){}
   applyLoginLanguage();
   applyPasswordChangeLanguage();
@@ -5429,14 +5492,14 @@ async function initAuthentication(){
         try{localStorage.removeItem(USERS_LOCAL_PROFILE_KEY);}catch(e){}
         currentAuthenticatedUser=null;
         showLoginGate();
-        setLoginError(usersLoginText('inactive'));
+        showInactiveLoginMessage();
         return;
       }
     }else if(String(currentAuthenticatedUser?.status||'').trim().toLowerCase()!=='active'){
       try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
       currentAuthenticatedUser=null;
       showLoginGate();
-      setLoginError(usersLoginText('inactive'));
+      showInactiveLoginMessage();
       return;
     }
     setResponsibleFromLoggedInUser();
@@ -5453,14 +5516,14 @@ async function initAuthentication(){
         try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
         currentAuthenticatedUser=null;
         showLoginGate();
-        setLoginError(usersLoginText('inactive'));
+        showInactiveLoginMessage();
         return;
       }
     }else if(String(currentAuthenticatedUser?.status||'').trim().toLowerCase()!=='active'){
       try{localStorage.removeItem(USERS_REMEMBER_KEY);}catch(e){}
       currentAuthenticatedUser=null;
       showLoginGate();
-      setLoginError(usersLoginText('inactive'));
+      showInactiveLoginMessage();
       return;
     }
     setResponsibleFromLoggedInUser();
