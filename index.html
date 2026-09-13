@@ -5176,7 +5176,7 @@ function usersLoginText(key){
     config:'تعذر إعداد ملف المستخدمين',
     load:'تعذر تحميل بيانات المستخدمين',
     invalid:'اسم المستخدم أو كلمة المرور غير صحيحة',
-    inactive:'هذا المستخدم غير مفعل',
+    inactive:'هذا المستخدم غير نشط ولا يُسمح له بتسجيل الدخول',
     success:'تم تسجيل الدخول بنجاح'
   };
   const en={
@@ -5191,7 +5191,7 @@ function usersLoginText(key){
     config:'Users file configuration is not ready',
     load:'Unable to load users data',
     invalid:'Invalid username or password',
-    inactive:'This user is inactive',
+    inactive:'This user is inactive and is not allowed to sign in',
     success:'Login successful'
   };
   return (lang==='ar'?ar:en)[key]||key;
@@ -5288,6 +5288,46 @@ function applyRestoredUserToApp(u){
   currentAuthenticatedUser=u;
   setResponsibleFromLoggedInUser();
 }
+
+async function verifyCurrentUserStatusFromServer(){
+  if(!navigator.onLine || !usersGitHubConfigured()) return null;
+  const username=String(currentAuthenticatedUser?.username||'').trim().toLowerCase();
+  if(!username) return {found:false,active:false};
+  try{
+    const users=parseUsersCSV(await loadUsersCSV());
+    const fresh=users.find(u=>String(u.username||'').trim().toLowerCase()===username);
+    if(!fresh) return {found:false,active:false};
+    const active=String(fresh.status||'').trim().toLowerCase()==='active';
+    if(active){
+      currentAuthenticatedUser={
+        username:fresh.username,
+        employeeName:fresh.employeeName,
+        department:fresh.department,
+        jobTitle:fresh.jobTitle,
+        type:fresh.type,
+        status:fresh.status
+      };
+      try{
+        sessionStorage.setItem(USERS_SESSION_KEY,JSON.stringify(currentAuthenticatedUser));
+        const raw=localStorage.getItem(USERS_LOCAL_PROFILE_KEY);
+        if(raw){
+          const profile=JSON.parse(raw);
+          profile.username=fresh.username;
+          profile.employeeName=fresh.employeeName;
+          profile.department=fresh.department;
+          profile.jobTitle=fresh.jobTitle;
+          profile.type=fresh.type;
+          profile.status=fresh.status;
+          localStorage.setItem(USERS_LOCAL_PROFILE_KEY,JSON.stringify(profile));
+        }
+      }catch(e){}
+    }
+    return {found:true,active,user:fresh};
+  }catch(e){
+    return null;
+  }
+}
+
 function restoreSessionUser(){
   try{const raw=sessionStorage.getItem(USERS_SESSION_KEY);if(!raw)return false;const u=JSON.parse(raw);if(!u||!u.username)return false;applyRestoredUserToApp(u);return true;}catch(e){return false;}
 }
@@ -5307,7 +5347,10 @@ async function tryOfflineLogin(username,password){
     const raw=localStorage.getItem(USERS_LOCAL_PROFILE_KEY);if(!raw)return false;
     const u=JSON.parse(raw);
     if(!u||String(u.username||'').trim().toLowerCase()!==String(username||'').trim().toLowerCase())return false;
-    if(String(u.status||'').trim().toLowerCase()!=='active')return false;
+    if(String(u.status||'').trim().toLowerCase()!=='active'){
+      setLoginError(usersLoginText('inactive'));
+      return false;
+    }
     const hash=await hashLoginPassword(password);if(hash!==String(u.passwordHash||''))return false;
     applyRestoredUserToApp(u);try{sessionStorage.setItem(USERS_SESSION_KEY,JSON.stringify(currentAuthenticatedUser));}catch(e){}
     return true;
@@ -5376,12 +5419,50 @@ async function initAuthentication(){
       return String(profile.passwordHash)===await hashLoginPassword('00000');
     }catch(e){return false;}
   };
+
   if(restoreSessionUser()){
+    if(navigator.onLine && usersGitHubConfigured()){
+      const serverStatus=await verifyCurrentUserStatusFromServer();
+      if(serverStatus && !serverStatus.active){
+        try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
+        try{localStorage.removeItem(USERS_REMEMBER_KEY);}catch(e){}
+        try{localStorage.removeItem(USERS_LOCAL_PROFILE_KEY);}catch(e){}
+        currentAuthenticatedUser=null;
+        showLoginGate();
+        setLoginError(usersLoginText('inactive'));
+        return;
+      }
+    }else if(String(currentAuthenticatedUser?.status||'').trim().toLowerCase()!=='active'){
+      try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
+      currentAuthenticatedUser=null;
+      showLoginGate();
+      setLoginError(usersLoginText('inactive'));
+      return;
+    }
     setResponsibleFromLoggedInUser();
     if(await isTemporaryLocalPassword()){showPasswordChangeGate(currentAuthenticatedUser);return;}
     hideLoginGate();return;
   }
+
   if(await restoreRememberedUser()){
+    if(navigator.onLine && usersGitHubConfigured()){
+      const serverStatus=await verifyCurrentUserStatusFromServer();
+      if(serverStatus && !serverStatus.active){
+        try{localStorage.removeItem(USERS_REMEMBER_KEY);}catch(e){}
+        try{localStorage.removeItem(USERS_LOCAL_PROFILE_KEY);}catch(e){}
+        try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
+        currentAuthenticatedUser=null;
+        showLoginGate();
+        setLoginError(usersLoginText('inactive'));
+        return;
+      }
+    }else if(String(currentAuthenticatedUser?.status||'').trim().toLowerCase()!=='active'){
+      try{localStorage.removeItem(USERS_REMEMBER_KEY);}catch(e){}
+      currentAuthenticatedUser=null;
+      showLoginGate();
+      setLoginError(usersLoginText('inactive'));
+      return;
+    }
     setResponsibleFromLoggedInUser();
     if(await isTemporaryLocalPassword()){showPasswordChangeGate(currentAuthenticatedUser);return;}
     hideLoginGate();return;
