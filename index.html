@@ -79,6 +79,7 @@ window.DATA_GITHUB_CONFIG = {
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Tajawal',sans-serif; height:100%; overscroll-behavior:none; }
   /* Prevent the existing main screen from flashing behind the login gate while authentication is being checked. */
+  body.auth-pending{ overflow:hidden !important; }
   body.auth-pending .app{ visibility:hidden !important; pointer-events:none !important; }
   body.auth-pending .modal,
   body.auth-pending .sheet,
@@ -310,6 +311,7 @@ window.DATA_GITHUB_CONFIG = {
   #loginGate{
     position:fixed; inset:0; z-index:20000; background:var(--bg);
     display:flex; align-items:center; justify-content:center; padding:24px;
+    overflow:hidden;
   }
   #loginGate.hidden{ display:none; }
   .login-card{
@@ -463,7 +465,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> V5.99 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> V5.9 © 2026</div>
   </div>
 </div>
 
@@ -648,7 +650,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> V5.99 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> V5.9 © 2026</div>
 
   </div>
 </div>
