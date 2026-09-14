@@ -78,6 +78,11 @@ window.DATA_GITHUB_CONFIG = {
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Tajawal',sans-serif; height:100%; overscroll-behavior:none; }
+  /* Prevent the existing main screen from flashing behind the login gate while authentication is being checked. */
+  body.auth-pending .app{ visibility:hidden !important; pointer-events:none !important; }
+  body.auth-pending .modal,
+  body.auth-pending .sheet,
+  body.auth-pending .sheet-bg{ visibility:hidden !important; pointer-events:none !important; }
   h1,h2,h3,.disp{ font-family:'Cairo',sans-serif; }
 
   .app{ max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding-bottom:24px; }
@@ -381,7 +386,7 @@ window.DATA_GITHUB_CONFIG = {
   }
 </style>
 </head>
-<body>
+<body class="auth-pending">
 
 <!-- Login gate: authentication is required before the existing app can be used. -->
 
@@ -5112,6 +5117,7 @@ function applyPasswordChangeLanguage(){
   set('passwordChangeBtn',ar?'حفظ كلمة المرور':'Save Password');
 }
 function showPasswordChangeGate(user){
+  try{document.body.classList.add('auth-pending');}catch(e){}
   forcePasswordChangeUser=user||currentAuthenticatedUser||null;
   const gate=document.getElementById('passwordChangeGate');
   const u=document.getElementById('passwordChangeUsername');
@@ -5315,6 +5321,7 @@ function setLoginError(msg){
 }
 
 function showLoginGate(){
+  try{document.body.classList.add('auth-pending');}catch(e){}
   const gate=document.getElementById('loginGate');
   if(gate)gate.classList.remove('hidden');
   const u=document.getElementById('loginUsername');
@@ -5342,6 +5349,7 @@ function setResponsibleFromLoggedInUser(){
 function hideLoginGate(){
   const gate=document.getElementById('loginGate');
   if(gate)gate.classList.add('hidden');
+  try{document.body.classList.remove('auth-pending');}catch(e){}
 }
 
 async function saveAuthenticatedUser(user,password){
