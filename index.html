@@ -408,10 +408,22 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
     <div class="password-change-error" id="passwordChangeError"></div>
-    <button class="password-change-btn" id="passwordChangeBtn" type="button" onclick="submitPasswordChange()">حفظ كلمة المرور</button>
+    <button class="password-change-btn" id="passwordChangeBtn" type="button" onclick="submitPasswordChange(); return false;">حفظ كلمة المرور</button>
   </div>
 </div>
 
+<script id="loginNavigationGuard">
+(function(){
+  // Keep authentication entirely inside the existing page/TWA document.
+  // No redirect, new window, or history navigation is used by the login UI.
+  document.addEventListener('submit', function(e){
+    const form=e.target;
+    if(form && (form.closest('#loginGate') || form.closest('#passwordChangeGate'))){
+      e.preventDefault();
+    }
+  }, true);
+})();
+</script>
 <div id="loginGate">
   <div class="login-card">
     <div class="login-brand">
@@ -438,7 +450,7 @@ window.DATA_GITHUB_CONFIG = {
 
     <label class="login-remember" for="loginRemember"><input type="checkbox" id="loginRemember"><span id="loginRememberLabel">Remember login</span></label>
 
-    <button class="login-btn" id="loginBtn" type="button" onclick="performLogin()">Login</button>
+    <button class="login-btn" id="loginBtn" type="button" onclick="performLogin(); return false;">Login</button>
     <div class="login-error" id="loginError"></div>
     <div class="login-bottom-row">
       <button class="login-lang" id="loginLangBtn" type="button" onclick="toggleLoginLanguage()">AR</button>
@@ -1022,7 +1034,7 @@ function loadShelfLinkSheetsFromStorage(){
 // required for this mode.
 const FILE_UPLOAD_DATA_OWNER = 'sysorapro';
 const FILE_UPLOAD_DATA_REPO = 'warehouse-scanner-Data';
-const FILE_UPLOAD_FINAL_HEADERS=['Department','SheetNo.','SheetName','Item Code','Item Name','Trans.Status','PersonalName','Trans.Date','Trans.Time','Deletion'];
+const FILE_UPLOAD_FINAL_HEADERS=['Department','SheetNo.','SheetName','Item Code','Item Name','Trans.Status','PersonalName','Trans.Date','Trans.Time'];
 const FILE_UPLOAD_URL = 'https://raw.githubusercontent.com/sysorapro/warehouse-scanner-Data/main/FileUploade.csv';
 const FILE_UPLOAD_GITHUB_PATH = 'FileUploade.csv';
 const FILE_UPLOAD_GITHUB_BRANCH = 'main';
@@ -1255,7 +1267,6 @@ function parseFileUploadCSV(text){
     department:col('Department'), sheetNo:col('SheetNo.'), sheetName:col('SheetName'), itemCode:col('Item Code'), itemName:col('Item Name'),
     transStatus:col('Trans.Status','Status'), personalName:col('PersonalName'),
     transDate:col('Trans.Date','Scan Date'), transTime:col('Trans.Time','Scan Time'),
-    deletion:col('Deletion'),
     shelfCode:col('Shelf Code'), whn:col('WhN'), typ:col('Typ'), bt:col('BT'),
     stockIndicator:col('Stock Indicator'), stockRemoval:col('Stock Removal'), stockPlacement:col('Stock Placement'),
     stoLocation:col('Sto Location','Sto.Location'), groupNo:col('Group No'), groupName:col('Group Name'), sec:col('Sec'), empty:col('Empty')
@@ -1264,7 +1275,6 @@ function parseFileUploadCSV(text){
   return matrix.slice(1).map((r,rowIndex)=>({
     sourceIndex:rowIndex, department:val(r,c.department), sheetNo:val(r,c.sheetNo), sheetName:val(r,c.sheetName),
     itemCode:val(r,c.itemCode), itemName:val(r,c.itemName), status:val(r,c.transStatus),
-    deletion:val(r,c.deletion),
     userName:val(r,c.personalName), personalName:val(r,c.personalName), transDate:val(r,c.transDate), transTime:val(r,c.transTime),
     shelfCode:val(r,c.shelfCode), whn:val(r,c.whn), typ:val(r,c.typ), bt:val(r,c.bt),
     stockIndicator:val(r,c.stockIndicator), stockRemoval:val(r,c.stockRemoval), stockPlacement:val(r,c.stockPlacement),
@@ -1336,8 +1346,7 @@ function ensureFileUploadColumns(matrix){
     department:['department','dept'], sheetno:['sheetno','sheetno.','sheetnumber'], sheetname:['sheetname','sheet name'],
     itemcode:['itemcode','item code'], itemname:['itemname','item name'],
     transstatus:['transstatus','status'], personalname:['personalname','user name','username'],
-    transdate:['transdate','scan date','date'], transtime:['transtime','scan time','time'],
-    deletion:['deletion']
+    transdate:['transdate','scan date','date'], transtime:['transtime','scan time','time']
   };
   const findCol=(key)=>{
     for(const a of aliases[key]||[key]){const i=oldIdx[norm(a)];if(i!==undefined)return i;}
@@ -1529,9 +1538,8 @@ async function loadFileUploadRows(){
     if(!admin && (!myDept || !dept || dept!==myDept))return;
     const key=String(r.sheetNo||'').trim();
     if(!key)return;
-    if(!map[key])map[key]={sheetNo:key,sheetName:r.sheetName||'',department:r.department||'',rows:[],transferred:false,transferUser:'',transferDate:'',transferTime:'',deletion:false};
+    if(!map[key])map[key]={sheetNo:key,sheetName:r.sheetName||'',department:r.department||'',rows:[],transferred:false,transferUser:'',transferDate:'',transferTime:''};
     if(!map[key].sheetName && r.sheetName)map[key].sheetName=r.sheetName;
-    if(String(r.deletion||'').trim().toLowerCase()==='ok') map[key].deletion=true;
     map[key].rows.push(r);
     if(String(r.status||'').trim()){
       map[key].transferred=true;
@@ -1540,7 +1548,7 @@ async function loadFileUploadRows(){
       map[key].transferTime=String(r.transTime||'').trim();
     }
   });
-  fileUploadSheets=Object.values(map).filter(s=>s.rows.length>0 && !s.deletion);
+  fileUploadSheets=Object.values(map).filter(s=>s.rows.length>0);
 }
 function openFileUploadMode(){
   if(!navigator.onLine){toast(lang==='ar'?'لا يوجد اتصال بالإنترنت':'No internet connection','warning');return;}
@@ -1639,10 +1647,7 @@ function renderFileUploadView(){
   if(!title||!info||!el)return;
 
   const sheet=fileUploadSheets.find(s=>String(s.sheetNo)===String(currentFileUploadViewSheetNo));
-  if(!sheet){
-    closeFileUploadView();
-    return;
-  }
+  if(!sheet){el.innerHTML='<div class="empty-state" style="margin:18px;">'+(lang==='ar'?'الملف غير متاح':'File unavailable')+'</div>';return;}
 
   const sheetLabel=String(sheet.sheetNo||'')+(sheet.sheetName?' — '+String(sheet.sheetName):'');
   title.textContent=sheetLabel;
@@ -1746,9 +1751,6 @@ async function moveFileUploadSheetToPrivate(sheetNo){
     if(!saveShelfLinkSheetsVerified()){shelfLinkSheets=shelfLinkSheets.filter(x=>x!==addedSheet);throw new Error('Unable to save Private File');}
     await loadFileUploadRows();
     renderFileUploadSheetsList();
-    if(String(currentFileUploadViewSheetNo||'')===key && !fileUploadSheets.some(s=>String(s.sheetNo)===key)){
-      closeFileUploadView();
-    }
     // Keep the currently opened Public File sheet in sync immediately after transfer.
     // The sheet remains visible in the modal but switches to Inactive without requiring exit/re-entry.
     if(String(currentFileUploadViewSheetNo||'')===key){
@@ -1993,7 +1995,7 @@ function renderFileUploadSheet(){
 
 function buildFileUploadAOA(){
   const header=[...FILE_UPLOAD_FINAL_HEADERS];
-  const rows=fileUploadList.map(r=>[r.department||'',r.sheetNo||'',r.sheetName||'',r.itemCode||'',r.itemName||'',r.status||'',r.userName||'',r.transDate||'',r.transTime||'',r.deletion||'']);
+  const rows=fileUploadList.map(r=>[r.department||'',r.sheetNo||'',r.sheetName||'',r.itemCode||'',r.itemName||'',r.status||'',r.userName||'',r.transDate||'',r.transTime||'']);
   return [header,...rows];
 }
 function buildFileUploadXLSXBlob(){const ws=XLSX.utils.aoa_to_sheet(buildFileUploadAOA()),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'FileUploade');return new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});}
