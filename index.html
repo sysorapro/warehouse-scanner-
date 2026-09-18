@@ -100,7 +100,7 @@ window.DATA_GITHUB_CONFIG = {
   .splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
   .splash-mark{ height:110px; justify-content:space-between; gap:0; }
   .splash-mark i{ width:21px; border-radius:7px; transform-origin:center bottom; }
-  .splash-logo{ width:180px; height:auto; object-fit:contain; display:block; }
+  .splash-logo{ width:150px; height:auto; object-fit:contain; display:block; }
   .splash-title{ font-family:'Cairo',sans-serif; font-weight:800; font-size:20px; color:var(--text); letter-spacing:.3px; margin-top:2px; }
   .splash-credit{ font-family:'Tajawal',sans-serif; font-size:14.5px; color:var(--muted); letter-spacing:.4px; margin-top:-6px; }
   .splash-credit b{ color:var(--amber-fg); font-family:'Cairo',sans-serif; font-weight:800; }
@@ -576,7 +576,7 @@ window.DATA_GITHUB_CONFIG = {
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
-             style="width:150px; height:auto; object-fit:contain;">
+             style="width:120px; height:auto; object-fit:contain;">
     </div>
   </div>
 </div>
@@ -590,13 +590,14 @@ window.DATA_GITHUB_CONFIG = {
     <div class="splash-loading-text" id="splashLoadingText">جاري تحميل البيانات وتجهيز البرنامج...</div>
     <div class="splash-progress"><div class="splash-progress-bar" id="splashProgressBar"></div></div>
     <div class="splash-progress-percent" id="splashProgressPercent">6%</div>
-    <div class="splash-status">
-      <span id="splashStatusConnection" class="active"><i></i><b id="splashStatusConnectionText">Connection</b></span>
-      <span id="splashStatusData"><i></i><b id="splashStatusDataText">Data</b></span>
-      <span id="splashStatusSystem"><i></i><b id="splashStatusSystemText">System</b></span>
-    </div>
-    </div>
-   </div>
+       <div class="splash-status">
+         <span id="splashStatusConnection" class="active"><i></i><b id="splashStatusConnectionText">Connection</b></span>
+         <span id="splashStatusData"><i></i><b id="splashStatusDataText">Data</b></span>
+         <span id="splashStatusSystem"><i></i><b id="splashStatusSystemText">System</b></span>
+       </div>
+     <img class="splash-logo" id="splashLogo" src="./logoico.png" alt="Sysora Logo">
+  </div>
+</div>
 <script>
   (function(){
     var title = document.getElementById('splashTitle');
@@ -788,7 +789,7 @@ window.DATA_GITHUB_CONFIG = {
     <div style="text-align:center;">
     <img src="./LogoICO.png"
          alt="Sysora Logo"
-         style="width:150px; height:auto; object-fit:contain;">
+         style="width:120px; height:auto; object-fit:contain;">
     </div>
      
   </div>
@@ -914,7 +915,7 @@ window.DATA_GITHUB_CONFIG = {
     <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
-             style="width:150px; height:auto; object-fit:contain;">
+             style="width:120px; height:auto; object-fit:contain;">
     </div>
   </div>
 </div>
