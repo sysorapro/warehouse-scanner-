@@ -758,7 +758,6 @@ window.DATA_GITHUB_CONFIG = {
         <input type="checkbox" id="batchScanToggle" onchange="toggleBatchScanMode()" style="width:17px; height:17px; accent-color:var(--amber); flex-shrink:0;">
         <span data-i18n="batchScanLabel">وضع المسح المتتابع — يضيف الصنف تلقائيًا ويفتح الكاميرا تاني للي بعده</span>
       </label>
-      <button class="addbtn" id="addBtn" onclick="addEntry()" style="margin-top:14px;"><span data-i18n="addBtn">➕ إضافة السطر</span></button>
     </div>
 
     <div class="card">
@@ -881,6 +880,12 @@ window.DATA_GITHUB_CONFIG = {
       <button onclick="exportShelfLinkList()" title="Export" style="background:var(--amber); color:#1a1204; border:none; border-radius:9px; width:38px; height:34px; font-size:14px;">📊</button>
       <button onclick="shareShelfLinkList()" title="Share" style="background:var(--amber); color:#1a1204; border:none; border-radius:9px; width:38px; height:34px; font-size:14px;">📤</button>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding:0 14px 8px;">
+    <button id="shelfLinkSelectAllBtn" onclick="toggleShelfLinkSelectAll()" style="background:var(--amber);color:#1a1204;border:none;border-radius:9px;padding:7px 10px;font-size:12px;">☐ تحديد الكل</button>
+    <select id="shelfLinkFilter" onchange="setShelfLinkFilter(this.value)" style="flex:1;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:7px 9px;">
+      <option value="all">الكل</option><option value="scanned">تم المسح</option><option value="unscanned">لم يتم المسح</option>
+    </select>
   </div>
   <div style="flex:1; overflow-y:auto;" id="shelfLinkListEl"></div>
 </div>
@@ -1149,57 +1154,89 @@ let shelfLinkList = []; // rows of whichever sheet is currently open in the deta
 // When >= 0, the next successful "shelfLink" scan fills shelfLinkList[shelfLinkTargetIndex]
 let shelfLinkTargetIndex = -1;
 
-function makeEmptyShelfLinkRow(itemCode, itemName){
-  return { itemCode, itemName, shelf:'', whn:'', typ:'', bt:'', stockIndicator:'', stockRemoval:'', stockPlacement:'', stoLocation:'', groupNo:'', groupName:'', sec:'', empty:'' };
+function generatePrivateFileRowId(){
+  return 'pr_' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+}
+function makeEmptyShelfLinkRow(itemCode, itemName, actionType=''){
+  return { id:generatePrivateFileRowId(), itemCode:String(itemCode||''), itemName:String(itemName||''), actionType:String(actionType||''), shelf:'', whn:'', typ:'', bt:'', stockIndicator:'', stockRemoval:'', stockPlacement:'', stoLocation:'', groupNo:'', groupName:'', sec:'', empty:'', personName:'', scanDate:'', scanTime:'' };
+}
+function parseShelfLinkCSVLine(line){
+  const out=[]; let cur='', quoted=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(quoted && line[i+1]==='"'){cur+='"';i++;}
+      else quoted=!quoted;
+    }else if(ch===',' && !quoted){out.push(cur.trim());cur='';}
+    else cur+=ch;
+  }
+  out.push(cur.trim()); return out;
 }
 function parseShelfLinkUploadCSV(text){
-  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-  if (!lines.length) return [];
-  const startIdx = /itemcode/i.test(lines[0]) ? 1 : 0;
-  const rows = [];
-  for (let i = startIdx; i < lines.length; i++){
-    const parts = lines[i].split(',');
-    const itemCode = (parts[0] || '').trim().replace(/^"|"$/g, '');
-    const itemName = (parts.slice(1).join(',') || '').trim().replace(/^"|"$/g, '');
-    if (!itemCode) continue;
-    rows.push(makeEmptyShelfLinkRow(itemCode, itemName));
+  const lines=text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  if(!lines.length) return [];
+  const first=parseShelfLinkCSVLine(lines[0]);
+  const norm=v=>String(v??'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+  const hn=first.map(norm);
+  const hasHeader=hn.some(v=>['itemcode','code','itemnumber','itemno','itemname','name','description','actiontype','action'].includes(v));
+  let startIdx=hasHeader?1:0, codeIdx=0, nameIdx=1, actionIdx=2;
+  if(hasHeader){
+    const ci=hn.findIndex(v=>['itemcode','code','itemnumber','itemno'].includes(v));
+    const ni=hn.findIndex(v=>['itemname','name','description'].includes(v));
+    const ai=hn.findIndex(v=>['actiontype','action'].includes(v));
+    if(ci>=0)codeIdx=ci; if(ni>=0)nameIdx=ni; actionIdx=ai;
+  }
+  const rows=[];
+  for(let i=startIdx;i<lines.length;i++){
+    const parts=parseShelfLinkCSVLine(lines[i]);
+    const itemCode=String(parts[codeIdx]??'').trim(), itemName=String(parts[nameIdx]??'').trim();
+    if(!itemCode) continue;
+    rows.push(makeEmptyShelfLinkRow(itemCode,itemName,actionIdx>=0?String(parts[actionIdx]??'').trim():''));
   }
   return rows;
 }
-function generateShelfLinkSheetId(){
-  return 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function generateShelfLinkSheetId(){ return 'sh_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function generatePrivateFileNumber(){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let value='';
+  const bytes=new Uint8Array(10); try{crypto.getRandomValues(bytes);}catch(e){for(let i=0;i<10;i++)bytes[i]=Math.floor(Math.random()*256);}
+  for(let i=0;i<10;i++)value+=chars[bytes[i]%chars.length]; return value;
 }
-function getShelfLinkSheet(id){
-  return shelfLinkSheets.find(s => s.id === id) || null;
+function generateUniquePrivateFileNumber(){
+  const used=new Set(shelfLinkSheets.map(s=>String(s.sheetNo||'').trim()).filter(Boolean)); let no='';
+  do{no=generatePrivateFileNumber();}while(used.has(no)); return no;
 }
-function saveShelfLinkSheets(){
-  try{ localStorage.setItem(SHELF_LINK_SHEETS_KEY, JSON.stringify(shelfLinkSheets)); }catch(e){}
+function normalizePrivateShelfLinkSheets(){
+  let changed=false, used=new Set();
+  shelfLinkSheets.forEach(s=>{
+    if(!Array.isArray(s.rows)){s.rows=[];changed=true;}
+    let n=String(s.sheetNo||'').trim();
+    if(!n || used.has(n)){ do{n=generatePrivateFileNumber();}while(used.has(n)); s.sheetNo=n; changed=true; }
+    used.add(n);
+    if(!s.sourceType){s.sourceType=(s.transferUser||s.transferDate||s.transferTime)?'public':'device';changed=true;}
+    s.rows.forEach(r=>{
+      if(!r.id){r.id=generatePrivateFileRowId();changed=true;}
+      if(r.actionType===undefined){r.actionType='';changed=true;}
+      if(r.personName===undefined){r.personName='';changed=true;}
+      if(r.scanDate===undefined){r.scanDate='';changed=true;}
+      if(r.scanTime===undefined){r.scanTime='';changed=true;}
+    });
+  });
+  if(changed)saveShelfLinkSheets();
 }
-// Persists whichever sheet is currently open in the detail view.
-function saveShelfLinkList(){
-  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
-  if (sheet) sheet.rows = shelfLinkList;
-  saveShelfLinkSheets();
-}
+function getShelfLinkSheet(id){ return shelfLinkSheets.find(s=>s.id===id)||null; }
+function saveShelfLinkSheets(){ try{localStorage.setItem(SHELF_LINK_SHEETS_KEY,JSON.stringify(shelfLinkSheets));}catch(e){} }
+function saveShelfLinkList(){ const sheet=getShelfLinkSheet(currentShelfLinkSheetId); if(sheet)sheet.rows=shelfLinkList; saveShelfLinkSheets(); }
 function loadShelfLinkSheetsFromStorage(){
   try{
-    const raw = JSON.parse(localStorage.getItem(SHELF_LINK_SHEETS_KEY) || 'null');
-    if (Array.isArray(raw)){ shelfLinkSheets = raw; return; }
+    const raw=JSON.parse(localStorage.getItem(SHELF_LINK_SHEETS_KEY)||'null');
+    if(Array.isArray(raw)){shelfLinkSheets=raw;normalizePrivateShelfLinkSheets();return;}
   }catch(e){}
-  shelfLinkSheets = [];
-  // One-time migration from the old single-list storage format, so any
-  // previously uploaded list isn't lost when this becomes multi-sheet.
+  shelfLinkSheets=[];
   try{
-    const oldRaw = localStorage.getItem(SHELF_LINK_KEY);
-    if (oldRaw){
-      const oldRows = JSON.parse(oldRaw);
-      if (Array.isArray(oldRows) && oldRows.length){
-        shelfLinkSheets.push({ id: generateShelfLinkSheetId(), name: (lang === 'ar' ? 'شيت 1' : 'Sheet 1'), rows: oldRows });
-        saveShelfLinkSheets();
-      }
-      localStorage.removeItem(SHELF_LINK_KEY);
-    }
+    const oldRaw=localStorage.getItem(SHELF_LINK_KEY);
+    if(oldRaw){const oldRows=JSON.parse(oldRaw); if(Array.isArray(oldRows)&&oldRows.length){shelfLinkSheets.push({id:generateShelfLinkSheetId(),sheetNo:generateUniquePrivateFileNumber(),name:(lang==='ar'?'شيت 1':'Sheet 1'),sourceType:'device',rows:oldRows});saveShelfLinkSheets();} localStorage.removeItem(SHELF_LINK_KEY);}
   }catch(e){}
+  normalizePrivateShelfLinkSheets();
 }
 
 // ================= FileUploade shared mode =================
@@ -1209,7 +1246,7 @@ function loadShelfLinkSheetsFromStorage(){
 // required for this mode.
 const FILE_UPLOAD_DATA_OWNER = 'sysorapro';
 const FILE_UPLOAD_DATA_REPO = 'warehouse-scanner-Data';
-const FILE_UPLOAD_FINAL_HEADERS=['Department','SheetNo.','SheetName','Item Code','Item Name','Trans.Status','PersonalName','Trans.Date','Trans.Time','Deletion'];
+const FILE_UPLOAD_FINAL_HEADERS=['Department','SheetNo.','SheetName','ActionType','Item Code','Item Name','Trans.Status','PersonalName','Trans.Date','Trans.Time','Deletion'];
 const FILE_UPLOAD_URL = 'https://raw.githubusercontent.com/sysorapro/warehouse-scanner-Data/main/FileUploade.csv';
 const FILE_UPLOAD_GITHUB_PATH = 'FileUploade.csv';
 const FILE_UPLOAD_GITHUB_BRANCH = 'main';
@@ -1221,6 +1258,8 @@ const FILE_UPLOAD_STATE_KEY = 'warehouseScannerFileUploadState';
 const FILE_UPLOAD_DELETED_SHEETS_KEY = 'warehouseScannerFileUploadDeletedSheets';
 let selectedFileUploadSheets = new Set();
 let fileUploadRows=[];
+let fileUploadRawTextCache='';
+let fileUploadContentSHA='';
 let fileUploadSheets=[];
 let currentFileUploadSheetNo=null;
 let currentFileUploadViewSheetNo=null;
@@ -1439,7 +1478,7 @@ function parseFileUploadCSV(text){
   h.forEach((x,i)=>{if(x&&!Object.prototype.hasOwnProperty.call(idx,x))idx[x]=i;});
   const col=(...names)=>{for(const n of names){const k=normHeader(n);if(idx[k]!==undefined)return idx[k];}return -1;};
   const c={
-    department:col('Department'), sheetNo:col('SheetNo.'), sheetName:col('SheetName'), itemCode:col('Item Code'), itemName:col('Item Name'),
+    department:col('Department'), sheetNo:col('SheetNo.'), sheetName:col('SheetName'), actionType:col('ActionType','Action Type','Action'), itemCode:col('Item Code'), itemName:col('Item Name'),
     transStatus:col('Trans.Status','Status'), personalName:col('PersonalName'),
     transDate:col('Trans.Date','Scan Date'), transTime:col('Trans.Time','Scan Time'), deletion:col('Deletion'),
     shelfCode:col('Shelf Code'), whn:col('WhN'), typ:col('Typ'), bt:col('BT'),
@@ -1448,7 +1487,7 @@ function parseFileUploadCSV(text){
   };
   const val=(row,i)=>i<0?'':clean(row[i]);
   return matrix.slice(1).map((r,rowIndex)=>({
-    sourceIndex:rowIndex, department:val(r,c.department), sheetNo:val(r,c.sheetNo), sheetName:val(r,c.sheetName),
+    sourceIndex:rowIndex, department:val(r,c.department), sheetNo:val(r,c.sheetNo), sheetName:val(r,c.sheetName), actionType:val(r,c.actionType),
     itemCode:val(r,c.itemCode), itemName:val(r,c.itemName), status:val(r,c.transStatus),
     userName:val(r,c.personalName), personalName:val(r,c.personalName), transDate:val(r,c.transDate), transTime:val(r,c.transTime), deletion:val(r,c.deletion),
     shelfCode:val(r,c.shelfCode), whn:val(r,c.whn), typ:val(r,c.typ), bt:val(r,c.bt),
@@ -1518,7 +1557,7 @@ function ensureFileUploadColumns(matrix){
   const oldIdx={};
   oldHeader.forEach((h,i)=>{const k=norm(h);if(k&&!Object.prototype.hasOwnProperty.call(oldIdx,k))oldIdx[k]=i;});
   const aliases={
-    department:['department','dept'], sheetno:['sheetno','sheetno.','sheetnumber'], sheetname:['sheetname','sheet name'],
+    department:['department','dept'], sheetno:['sheetno','sheetno.','sheetnumber'], sheetname:['sheetname','sheet name'], actiontype:['actiontype','action type','action'],
     itemcode:['itemcode','item code'], itemname:['itemname','item name'],
     transstatus:['transstatus','status'], personalname:['personalname','user name','username'],
     transdate:['transdate','scan date','date'], transtime:['transtime','scan time','time'], deletion:['deletion']
@@ -1542,18 +1581,35 @@ function ensureFileUploadColumns(matrix){
 }
 async function modifyFileUploadCSV(mutator,message){
   if(!fileUploadGitHubConfigured())throw new Error('GitHub token is not configured');
+  // Fast path: use the FileUploade content/SHA already loaded for the Public File
+  // instead of downloading and parsing the whole CSV again. GitHub's Contents API
+  // still requires the complete file on PUT, but this removes one network round trip.
   for(let attempt=0;attempt<6;attempt++){
-    const current=await githubGetFile(FILE_UPLOAD_GITHUB_PATH);
+    let current;
+    if(attempt===0 && fileUploadRawTextCache && fileUploadContentSHA){
+      current={text:fileUploadRawTextCache,sha:fileUploadContentSHA};
+    }else{
+      current=await githubGetFile(FILE_UPLOAD_GITHUB_PATH);
+    }
     const matrix=parseCSVMatrix(current.text);
     if(!matrix.length)throw new Error('FileUploade.csv is empty');
     const idx=ensureFileUploadColumns(matrix);
     const changed=await mutator(matrix,idx);
     if(changed===false)return {changed:false};
+    const updatedText=serializeCSVMatrix(matrix);
     try{
-      await githubPutFile(FILE_UPLOAD_GITHUB_PATH,serializeCSVMatrix(matrix),current.sha,message);
+      const result=await githubPutFile(FILE_UPLOAD_GITHUB_PATH,updatedText,current.sha,message);
+      fileUploadRawTextCache=updatedText;
+      fileUploadContentSHA=result?.content?.sha || result?.sha || fileUploadContentSHA;
+      if(!fileUploadContentSHA){
+        // Some GitHub responses omit the content SHA; the next operation will fetch it.
+        fileUploadRawTextCache='';
+      }
       return {changed:true};
     }catch(e){
-      if(e.status===409&&attempt<5)continue;
+      // A 409 means another user changed FileUploade after our cached read.
+      // Refresh once and retry against the latest SHA.
+      if(e.status===409&&attempt<5){fileUploadRawTextCache='';fileUploadContentSHA='';continue;}
       throw e;
     }
   }
@@ -1697,6 +1753,8 @@ async function loadFileUploadRows(){
     if(fileUploadGitHubConfigured()){
       const current=await githubGetFile(FILE_UPLOAD_GITHUB_PATH);
       text=current.text;
+      fileUploadRawTextCache=current.text;
+      fileUploadContentSHA=current.sha||'';
     }else throw new Error('GitHub not configured');
   }catch(e){
     // Public Files must use the live online source only. No local
@@ -1704,6 +1762,8 @@ async function loadFileUploadRows(){
     const r=await fetch(FILE_UPLOAD_URL+'?v='+Date.now(),{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     text=await r.text();
+    fileUploadRawTextCache='';
+    fileUploadContentSHA='';
   }
   const allRows=parseFileUploadCSV(text);
   fileUploadRows=allRows;
@@ -1745,6 +1805,8 @@ async function openFileUploadMode(){
   try{
     await loadFileUploadRows();
     renderFileUploadSheetsList();
+    fileUploadLastSHA=JSON.stringify(fileUploadRows);
+    startFileUploadAutoSync();
   }catch(e){
     toast(lang==='ar'?'تعذر تحميل ملف FileUploade من الإنترنت':'Unable to load FileUploade from the internet','error');
   }
@@ -1773,7 +1835,9 @@ function startFileUploadAutoSync(){
   // (SHA) changes. Nothing is downloaded/saved as a local FileUploade copy.
   clearInterval(fileUploadSyncTimer);
   fileUploadSyncTimer=setInterval(async()=>{
-    if(!document.getElementById('fileUploadSheetsModal')?.classList.contains('open'))return;
+    const sheetsOpen=document.getElementById('fileUploadSheetsModal')?.classList.contains('open');
+    const viewOpen=document.getElementById('fileUploadViewModal')?.classList.contains('open');
+    if(!sheetsOpen && !viewOpen)return;
     if(!navigator.onLine || fileUploadSyncBusy)return;
     fileUploadSyncBusy=true;
     try{
@@ -1890,6 +1954,7 @@ function renderFileUploadView(){
         <div style="flex:1;min-width:0;">
           <div style="font-weight:800;font-family:'Cairo';font-size:13.5px;color:var(--text);">${escapeHtml(r.itemCode||'—')}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(r.itemName||'—')}</div>
+          ${r.actionType?`<div style="font-size:11px;color:var(--amber-fg);margin-top:3px;">${lang==='ar'?'نوع الإجراء':'Action Type'}: ${escapeHtml(String(r.actionType).toLowerCase()==='edit'?(lang==='ar'?'تعديل':'Edit'):String(r.actionType).toLowerCase()==='new'?(lang==='ar'?'جديد':'New'):r.actionType)}</div>`:''}
           ${status}
         </div>
       </div>`;
@@ -1942,6 +2007,7 @@ async function moveFileUploadSheetToPrivate(sheetNo){
       latestDept=dept||transferDept;
       latestSheetName=String(matrix[active[0]][sn]||'').trim();
       transferredRows=active.map(i=>({
+        actionType:String(matrix[i][idx['actiontype']]||''),
         itemCode:String(matrix[i][idx['itemcode']]||''),
         itemName:String(matrix[i][idx['itemname']]||'')
       }));
@@ -1959,8 +2025,8 @@ async function moveFileUploadSheetToPrivate(sheetNo){
       return;
     }
     if(!transferredRows||!transferredRows.length)throw new Error('No rows transferred');
-    const privateRows=transferredRows.map(r=>({itemCode:r.itemCode,itemName:r.itemName,shelf:'',whn:'',typ:'',bt:'',stockIndicator:'',stockRemoval:'',stockPlacement:'',stoLocation:'',groupNo:'',groupName:'',sec:'',empty:'',scanDate:'',scanTime:''}));
-    const addedSheet={id:generateShelfLinkSheetId(),name:key,responsible:transferEmployee||transferUser,rows:privateRows,department:latestDept||transferDept,sheetName:latestSheetName,transferUser,transferDate:transDate,transferTime:transTime};
+    const privateRows=transferredRows.map(r=>makeEmptyShelfLinkRow(r.itemCode,r.itemName,r.actionType||''));
+    const addedSheet={id:generateShelfLinkSheetId(),sheetNo:String(key||''),name:key,responsible:transferEmployee||transferUser,sourceType:'public',rows:privateRows,department:latestDept||transferDept,sheetName:latestSheetName,transferUser,transferDate:transDate,transferTime:transTime};
     shelfLinkSheets.push(addedSheet);
     if(!saveShelfLinkSheetsVerified()){shelfLinkSheets=shelfLinkSheets.filter(x=>x!==addedSheet);throw new Error('Unable to save Private File');}
     await loadFileUploadRows();
@@ -2017,6 +2083,23 @@ async function refreshFileUploadSheetLockIndicators(){
   }));
 }
 
+function getActionTypeSummary(rows){
+  const counts=new Map();
+  (rows||[]).forEach(r=>{
+    const raw=String(r?.actionType??'').trim();
+    if(!raw)return;
+    const norm=raw.toLowerCase();
+    let key=norm==='new'||norm==='جديد'?'new':(norm==='edit'||norm==='تعديل'?'edit':raw);
+    counts.set(key,(counts.get(key)||0)+1);
+  });
+  const order=['new','edit'];
+  const keys=[...order.filter(k=>counts.has(k)),...counts.keys()].filter((k,i,a)=>a.indexOf(k)===i);
+  return keys.map(k=>{
+    const label=k==='new'?(lang==='ar'?'جديد':'New'):k==='edit'?(lang==='ar'?'تعديل':'Edit'):k;
+    return `${counts.get(k)} ${lang==='ar'?'صنف':'items'} (${escapeHtml(label)})`;
+  }).join(' / ');
+}
+
 function renderFileUploadSheetsList(){
   const el=document.getElementById('fileUploadSheetsListEl');
   if(!el)return;
@@ -2027,6 +2110,7 @@ function renderFileUploadSheetsList(){
   el.innerHTML=fileUploadSheets.map(s=>{
     const key=String(s.sheetNo).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const count=s.rows.length, dept=s.department||'', sheetName=s.sheetName||'';
+    const actionSummary=getActionTypeSummary(s.rows);
     const transferred=!!s.transferred;
     const action=transferred
       ? `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:10.5px;color:var(--muted);text-align:center;min-width:112px;">🔒 ${lang==='ar'?'غير نشط':'Inactive'}</div>`
@@ -2037,7 +2121,7 @@ function renderFileUploadSheetsList(){
     return `<div class="file-sheet-card" data-sheet-no="${escapeHtml(String(s.sheetNo))}" onclick="openFileUploadSheet('${key}')" style="margin:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;${transferred?'opacity:.78;':''}">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:900;font-family:'Cairo';font-size:14px;color:var(--text);">${escapeHtml(s.sheetNo)}${sheetName?` — ${escapeHtml(sheetName)}`:''}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">${escapeHtml(dept)} · ${count} ${lang==='ar'?'صنف':'items'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">${escapeHtml(dept)} · ${count} ${lang==='ar'?'صنف':'items'}${actionSummary ? ` · ${actionSummary}` : ''}</div>
         ${transferInfo}
       </div>
       ${action}
@@ -2071,17 +2155,20 @@ async function handleFileUploadScanResult(rawText){
   // The scanned shelf is allowed to CHANGE the current shelf code. The old
   // version rejected any shelf different from the original FileUploade value,
   // which made it impossible to correct/edit a shelf by scanning a new code.
-  // Always refresh shelves.csv before a FileUploade scan so every shelf field
-  // comes from the current GitHub master file, not a stale local cache.
-  try{
-    await loadShelfLookup(true);
-  }catch(e){
-    playErrorSound();if(navigator.vibrate)navigator.vibrate([80,60,80]);
-    toast(lang==='ar'?'❌ تعذر تحميل بيانات الرف':'❌ Unable to load shelf data','error');
-    stopScan();return;
-  }
+  // Use the already-loaded shelf master first to avoid an extra network request.
+  // Only refresh shelves.csv when the shelf is not found in the current lookup.
   const shelfKey=String(raw||'').trim();
-  const match=findFileUploadShelfMatch(shelfKey);
+  let match=findFileUploadShelfMatch(shelfKey);
+  if(!match){
+    try{
+      await loadShelfLookup(true);
+      match=findFileUploadShelfMatch(shelfKey);
+    }catch(e){
+      playErrorSound();if(navigator.vibrate)navigator.vibrate([80,60,80]);
+      toast(lang==='ar'?'❌ تعذر تحميل بيانات الرف':'❌ Unable to load shelf data','error');
+      stopScan();return;
+    }
+  }
   if(!shelfLookupLoaded||!match){
     playErrorSound();if(navigator.vibrate)navigator.vibrate([80,60,80]);
     toast(t('errShelfLinkNotFound',raw),'error');
@@ -2234,8 +2321,30 @@ async function shareFileUploadList(){
 window.addEventListener('pagehide',()=>{try{releaseFileUploadLock();}catch(e){}});
 window.addEventListener('pageshow',()=>{try{if(fileUploadLockOwner&&currentFileUploadSheetNo){startFileUploadHeartbeat();refreshFileUploadLock();}}catch(e){}});
 
+let selectedShelfLinkRowIds = new Set();
+let shelfLinkFilterMode = 'all';
+function ensureShelfLinkRowIds(){ shelfLinkList.forEach(r=>{if(!r.id)r.id=generatePrivateFileRowId();}); }
+function getShelfLinkFilteredRows(){
+  ensureShelfLinkRowIds();
+  if(shelfLinkFilterMode==='scanned') return shelfLinkList.filter(r=>String(r.shelf||'').trim());
+  if(shelfLinkFilterMode==='unscanned') return shelfLinkList.filter(r=>!String(r.shelf||'').trim());
+  return shelfLinkList.slice();
+}
+function getShelfLinkActionRows(){
+  const filtered=getShelfLinkFilteredRows();
+  const selected=filtered.filter(r=>selectedShelfLinkRowIds.has(r.id));
+  return selected.length?selected:filtered;
+}
+function setShelfLinkFilter(mode){ shelfLinkFilterMode=['all','scanned','unscanned'].includes(mode)?mode:'all'; renderShelfLinkList(); }
+function toggleShelfLinkRowSelection(id){ if(selectedShelfLinkRowIds.has(id))selectedShelfLinkRowIds.delete(id); else selectedShelfLinkRowIds.add(id); renderShelfLinkList(); }
+function toggleShelfLinkSelectAll(){
+  const visible=getShelfLinkFilteredRows(), allSelected=visible.length>0&&visible.every(r=>selectedShelfLinkRowIds.has(r.id));
+  visible.forEach(r=>{if(allSelected)selectedShelfLinkRowIds.delete(r.id);else selectedShelfLinkRowIds.add(r.id);}); renderShelfLinkList();
+}
+
 function openShelfLink(){
   if (!shelfLinkSheetsLoaded){ loadShelfLinkSheetsFromStorage(); shelfLinkSheetsLoaded = true; }
+  normalizePrivateShelfLinkSheets();
   renderShelfLinkSheetsList();
   document.getElementById('shelfLinkSheetsModal').classList.add('open');
 }
@@ -2248,7 +2357,9 @@ function openShelfLinkSheet(id){
   if (!sheet) return;
   currentShelfLinkSheetId = id;
   shelfLinkList = sheet.rows;
-  document.getElementById('shelfLinkSheetTitle').textContent = String(sheet.name||'') + (sheet.sheetName ? ' — ' + String(sheet.sheetName) : '');
+  selectedShelfLinkRowIds = new Set(); shelfLinkFilterMode='all';
+  ensureShelfLinkRowIds();
+  document.getElementById('shelfLinkSheetTitle').textContent = (sheet.sheetNo ? String(sheet.sheetNo)+' — ' : '') + String(sheet.sheetName || sheet.name || '');
   renderShelfLinkList();
   document.getElementById('shelfLinkSheetsModal').classList.remove('open');
   document.getElementById('shelfLinkModal').classList.add('open');
@@ -2312,18 +2423,20 @@ async function handleShelfLinkFileUpload(event){
       const headerNorm = first.map(norm);
       const hasHeader = headerNorm.some(v=>['itemcode','code','itemnumber','itemno','itemname','name','description'].includes(v));
       let startRow = hasHeader ? 1 : 0;
-      let codeIdx = 0, nameIdx = 1;
+      let codeIdx = 0, nameIdx = 1, actionIdx = 2;
       if(hasHeader){
         const ci=headerNorm.findIndex(v=>['itemcode','code','itemnumber','itemno'].includes(v));
         const ni=headerNorm.findIndex(v=>['itemname','name','description'].includes(v));
+        const ai=headerNorm.findIndex(v=>['actiontype','action'].includes(v));
         if(ci>=0) codeIdx=ci;
         if(ni>=0) nameIdx=ni;
+        actionIdx=ai;
       }
       for(let i=startRow;i<aoa.length;i++){
         const r=aoa[i]||[];
         const itemCode=String(r[codeIdx]??'').trim();
         const itemName=String(r[nameIdx]??'').trim();
-        if(itemCode||itemName) rows.push(makeEmptyShelfLinkRow(itemCode,itemName));
+        if(itemCode||itemName) rows.push(makeEmptyShelfLinkRow(itemCode,itemName,actionIdx>=0?String(r[actionIdx]??'').trim():''));
       }
     }else{
       rows = parseShelfLinkUploadCSV(await file.text());
@@ -2340,8 +2453,10 @@ async function handleShelfLinkFileUpload(event){
 
     shelfLinkSheets.push({
       id:generateShelfLinkSheetId(),
+      sheetNo:generateUniquePrivateFileNumber(),
       name:name.trim()||defaultName,
       responsible,
+      sourceType:'device',
       rows
     });
     saveShelfLinkSheets();
@@ -2385,6 +2500,8 @@ function handleShelfLinkScanResult(rawText){
     stockIndicator: match.stockIndicator, stockRemoval: match.stockRemoval, stockPlacement: match.stockPlacement,
     stoLocation: match.stoLocation, groupNo: match.groupNo, groupName: match.groupName,
     sec: match.sec, empty: match.empty,
+    personName: String(username||'').trim(),
+    actionType: String(shelfLinkList[i].actionType || document.getElementById('actionType')?.value || '').trim(),
     scanDate: now.toLocaleDateString('en-GB'), scanTime: now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
   };
   saveShelfLinkList();
@@ -2411,11 +2528,14 @@ function renderShelfLinkSheetsList(){
   }
   listEl.innerHTML = shelfLinkSheets.map(s => {
     const scannedCount = s.rows.filter(r => r.shelf).length;
+    const actionSummary = getActionTypeSummary(s.rows);
+    const sourceLabel = s.sourceType==='public' ? (lang==='ar'?'منقول من Public File':'From Public File') : (lang==='ar'?'مرفوع من الجهاز':'Uploaded from device');
     return `
     <div class="order-card" onclick="openShelfLinkSheet('${s.id}')" style="cursor:pointer;">
       <div style="flex:1; min-width:0;">
         <div style="font-weight:800; font-family:'Cairo'; font-size:14px; color:var(--text);">${escapeHtml(s.name)}${s.sheetName?` — ${escapeHtml(s.sheetName)}`:''}</div>
-        <div style="font-size:12px; color:var(--muted); margin-top:3px;">${scannedCount} / ${s.rows.length} ${t('itemsUnit')}${s.responsible ? ' · ' + escapeHtml(s.responsible) : ''}</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:3px;">${escapeHtml(sourceLabel)}</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:3px;">${scannedCount} / ${s.rows.length} ${t('itemsUnit')}${s.responsible ? ' · ' + escapeHtml(s.responsible) : ''}${actionSummary ? ' · ' + actionSummary : ''}</div>
       </div>
       <button onclick="event.stopPropagation(); deleteShelfLinkSheet('${s.id}')" style="background:none; border:none; color:var(--red); font-size:16px; padding:6px; flex-shrink:0;">🗑</button>
     </div>`;
@@ -2423,37 +2543,38 @@ function renderShelfLinkSheetsList(){
 }
 
 function renderShelfLinkList(){
-  const countLabel = document.getElementById('shelfLinkCountLabel');
-  const scannedCount = shelfLinkList.filter(r => r.shelf).length;
-  const sheet = getShelfLinkSheet(currentShelfLinkSheetId);
-  const respSuffix = sheet && sheet.responsible ? ' · ' + sheet.responsible : '';
-  countLabel.textContent = shelfLinkList.length ? `${scannedCount} / ${shelfLinkList.length} ${t('itemsUnit')}${respSuffix}` : '';
-  const listEl = document.getElementById('shelfLinkListEl');
-  if (!shelfLinkList.length){
-    listEl.innerHTML = `<div class="empty-state" style="margin:18px;">${t('shelfLinkEmptyState')}</div>`;
-    return;
-  }
-  listEl.innerHTML = shelfLinkList.map((r, i) => {
-    const statusHtml = r.shelf
-      ? `<span style="color:var(--mint-fg);">✓ ${escapeHtml(r.shelf)} — ${escapeHtml([r.groupNo, r.groupName].filter(Boolean).join(' - '))}</span>`
-      : `<span style="color:var(--muted);">${t('notScanned')}</span>`;
-    return `
-    <div class="order-card">
-      <div style="flex:1; min-width:0;">
-        <div style="font-weight:800; font-family:'Cairo'; font-size:13.5px; color:var(--text);">${escapeHtml(r.itemCode)}</div>
-        <div style="font-size:12px; color:var(--muted); margin:2px 0;">${escapeHtml(r.itemName)}</div>
-        <div style="font-size:11.5px; margin-top:3px;">${statusHtml}</div>
+  ensureShelfLinkRowIds();
+  const countLabel=document.getElementById('shelfLinkCountLabel');
+  const scannedCount=shelfLinkList.filter(r=>r.shelf).length, sheet=getShelfLinkSheet(currentShelfLinkSheetId);
+  const filtered=getShelfLinkFilteredRows(), selectedVisible=filtered.filter(r=>selectedShelfLinkRowIds.has(r.id)).length;
+  countLabel.textContent=shelfLinkList.length ? `${scannedCount} / ${shelfLinkList.length} ${t('itemsUnit')}${sheet&&sheet.responsible?' · '+sheet.responsible:''}${selectedVisible?' · '+selectedVisible+' selected':''}` : '';
+  const listEl=document.getElementById('shelfLinkListEl');
+  if(!shelfLinkList.length){listEl.innerHTML=`<div class="empty-state" style="margin:18px;">${t('shelfLinkEmptyState')}</div>`;return;}
+  const selectAllBtn=document.getElementById('shelfLinkSelectAllBtn');
+  if(selectAllBtn){const all=filtered.length>0&&filtered.every(r=>selectedShelfLinkRowIds.has(r.id));selectAllBtn.textContent=all?(lang==='ar'?'☑ إلغاء تحديد الكل':'☑ Clear All'):(lang==='ar'?'☐ تحديد الكل':'☐ Select All');}
+  listEl.innerHTML=filtered.map(r=>{
+    const i=shelfLinkList.indexOf(r), checked=selectedShelfLinkRowIds.has(r.id);
+    const statusHtml=r.shelf?`<span style="color:var(--mint-fg);">✓ ${escapeHtml(r.shelf)} — ${escapeHtml([r.groupNo,r.groupName].filter(Boolean).join(' - '))}</span>`:`<span style="color:var(--muted);">${t('notScanned')}</span>`;
+    return `<div class="order-card">
+      <div style="display:flex;align-items:flex-start;gap:9px;flex:1;min-width:0;">
+        <input type="checkbox" ${checked?'checked':''} onchange="toggleShelfLinkRowSelection('${r.id}')" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:800;font-family:'Cairo';font-size:13.5px;color:var(--text);">${escapeHtml(r.itemCode)}</div>
+          <div style="font-size:12px;color:var(--muted);margin:2px 0;">${escapeHtml(r.itemName)}</div>
+          ${r.actionType?`<div style="font-size:11px;color:var(--amber-fg);">Action Type: ${escapeHtml(r.actionType)}</div>`:''}
+          <div style="font-size:11.5px;margin-top:3px;">${statusHtml}</div>
+        </div>
       </div>
-      <button onclick="startShelfLinkScan(${i})" style="background:var(--amber); color:#1a1204; border:none; border-radius:9px; padding:8px 11px; font-size:14px; flex-shrink:0;">📷</button>
-      <button onclick="deleteShelfLinkRow(${i})" style="background:none; border:none; color:var(--red); font-size:16px; padding:6px; flex-shrink:0;">🗑</button>
+      <button onclick="startShelfLinkScan(${i})" style="background:var(--amber);color:#1a1204;border:none;border-radius:9px;padding:8px 11px;font-size:14px;flex-shrink:0;">📷</button>
+      <button onclick="deleteShelfLinkRow(${i})" style="background:none;border:none;color:var(--red);font-size:16px;padding:6px;flex-shrink:0;">🗑</button>
     </div>`;
   }).join('');
 }
 
 function buildShelfLinkAOA(){
-  const header = ['Item Code','Item Name','Shelf Code','WhN','Typ','BT','Stock Indicator','Stock Removal','Stock Placement','Sto Location','Group No','Group Name','Sec','Empty'];
-  const rows = shelfLinkList.map(r => [r.itemCode, r.itemName, r.shelf, r.whn, r.typ, r.bt, r.stockIndicator, r.stockRemoval, r.stockPlacement, r.stoLocation, r.groupNo, r.groupName, r.sec, r.empty]);
-  return [header, ...rows];
+  const sheet=getShelfLinkSheet(currentShelfLinkSheetId), rows=getShelfLinkActionRows();
+  const header=['SheetNo.','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time','Action Type','WhN','Typ','BT','Stock Indicator','Stock Removal','Stock Placement','Sto.Location','Sec'];
+  return [header,...rows.map(r=>[sheet?.sheetNo||'',r.shelf||'',r.groupNo||'',r.groupName||'',r.itemCode||'',r.itemName||'',r.personName||'',r.scanDate||'',r.scanTime||'',r.actionType||'',r.whn||'',r.typ||'',r.bt||'',r.stockIndicator||'',r.stockRemoval||'',r.stockPlacement||'',r.stoLocation||'',r.sec||''])];
 }
 function buildShelfLinkXLSXBlob(){
   const aoa = buildShelfLinkAOA();
@@ -3738,8 +3859,27 @@ function updateAddBtn(){
   const orderNo = document.getElementById('orderNo').value.trim();
   const responsible = document.getElementById('responsible').value.trim();
   const groupVal = document.getElementById('groupSelect').value;
-  if (actionType && orderNo && responsible && groupVal && currentShelf && currentItem) btn.classList.add('ready');
-  else btn.classList.remove('ready');
+  if (btn){
+    if (actionType && orderNo && responsible && groupVal && currentShelf && currentItem) btn.classList.add('ready');
+    else btn.classList.remove('ready');
+  }
+  // Add automatically as soon as shelf + item + all required fields are complete.
+  // Batch mode keeps its existing flow and remains responsible for its own next scan.
+  autoAddEntryIfReady();
+}
+
+let autoAddInProgress = false;
+async function autoAddEntryIfReady(){
+  if (autoAddInProgress || (typeof batchScanMode !== 'undefined' && batchScanMode)) return;
+  const actionTypeEl=document.getElementById('actionType');
+  const orderNoEl=document.getElementById('orderNo');
+  const responsibleEl=document.getElementById('responsible');
+  const groupEl=document.getElementById('groupSelect');
+  if(!actionTypeEl||!orderNoEl||!responsibleEl||!groupEl) return;
+  if(!actionTypeEl.value || !orderNoEl.value.trim() || !responsibleEl.value.trim() ||
+     !groupEl.value || !currentShelf || !currentItem) return;
+  autoAddInProgress=true;
+  try{ await addEntry(); } finally { autoAddInProgress=false; }
 }
 
 // ---- Remember the last-used employee name as the default for next time ----
