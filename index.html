@@ -297,7 +297,7 @@ window.DATA_GITHUB_CONFIG = {
     position:fixed; bottom:96px; left:50%; transform:translateX(-50%) translateY(20px);
     background:var(--surface-2); border:1.5px solid var(--border); color:var(--text);
     padding:13px 20px; border-radius:13px; font-size:13px; font-weight:700;
-    z-index:200; opacity:0; transition:.25s; pointer-events:none; max-width:88%;
+    z-index:200000; opacity:0; transition:.25s; pointer-events:none; max-width:88%;
     display:flex; align-items:center; gap:9px; box-shadow:0 8px 24px rgba(0,0,0,.35);
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -532,7 +532,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> V5.9 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -581,7 +581,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> V5.9 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -604,7 +604,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> V5.9 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -792,7 +792,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> V5.9 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1350,13 +1350,27 @@ function base64ToText(b64){
   return new TextDecoder('utf-8').decode(bytes);
 }
 function githubPathUrl(path){return fileUploadGitHubBase()+String(path).split('/').map(encodeURIComponent).join('/');}
+// Path -> {etag, sha, text}. A conditional GET (If-None-Match) that comes back
+// 304 Not Modified does NOT count against the shared token's rate limit, as
+// long as the request carries an Authorization header (it does here). This
+// lets Public File poll frequently without risking rate-limit exhaustion when
+// several devices have it open at once — every poll that finds no change is
+// effectively free; only an actual change consumes a request.
+const githubFileCache={};
 async function githubGetFile(path){
+  const cached=githubFileCache[path];
+  const headers=await fileUploadGitHubHeaders();
+  if(cached?.etag)headers['If-None-Match']=cached.etag;
   const res=await fetch(githubPathUrl(path)+'?ref='+encodeURIComponent(FILE_UPLOAD_GITHUB_BRANCH)+'&_='+Date.now(),{
-    method:'GET',headers:await fileUploadGitHubHeaders(),cache:'no-store'
+    method:'GET',headers,cache:'no-store'
   });
+  if(res.status===304 && cached)return {sha:cached.sha,text:cached.text,notModified:true};
   let data={}; try{data=await res.json();}catch(e){}
   if(!res.ok){const err=new Error(data.message||('GitHub GET HTTP '+res.status));err.status=res.status;throw err;}
-  return {sha:data.sha||'',text:base64ToText(data.content||'')};
+  const result={sha:data.sha||'',text:base64ToText(data.content||'')};
+  const etag=res.headers.get('ETag')||res.headers.get('etag');
+  if(etag)githubFileCache[path]={etag,sha:result.sha,text:result.text};
+  return result;
 }
 async function githubPutFile(path,text,sha,message){
   const body={message,content:textToBase64(text),branch:FILE_UPLOAD_GITHUB_BRANCH};
@@ -1364,12 +1378,14 @@ async function githubPutFile(path,text,sha,message){
   const res=await fetch(githubPathUrl(path),{method:'PUT',headers:await fileUploadGitHubHeaders(),body:JSON.stringify(body)});
   let data={}; try{data=await res.json();}catch(e){}
   if(!res.ok) { const err=new Error(data.message||('GitHub PUT HTTP '+res.status)); err.status=res.status; throw err; }
+  delete githubFileCache[path]; // our own write changed the ETag; drop the stale entry
   return data;
 }
 async function githubDeleteFile(path,sha,message){
   const res=await fetch(githubPathUrl(path),{method:'DELETE',headers:await fileUploadGitHubHeaders(),body:JSON.stringify({message,sha,branch:FILE_UPLOAD_GITHUB_BRANCH})});
   let data={}; try{data=await res.json();}catch(e){}
   if(!res.ok){const err=new Error(data.message||('GitHub DELETE HTTP '+res.status));err.status=res.status;throw err;}
+  delete githubFileCache[path];
   return data;
 }
 function fileUploadLockPath(sheetNo){
@@ -1854,9 +1870,10 @@ let fileUploadSyncBusy=false;
 let fileUploadLockListTimer=null;
 let fileUploadLastSHA='';
 function startFileUploadAutoSync(){
-  // Public Files live-refresh: check GitHub every second. This only reads
-  // FileUploade.csv and updates the visible table when the repository version
-  // (SHA) changes. Nothing is downloaded/saved as a local FileUploade copy.
+  // Public Files live-refresh: check GitHub every 350ms. Thanks to the ETag
+  // conditional-request support in githubGetFile, a poll that finds nothing
+  // changed comes back as a free 304 (no rate-limit cost), so this interval
+  // is safe to keep short even with several devices watching at once.
   clearInterval(fileUploadSyncTimer);
   fileUploadSyncTimer=setInterval(async()=>{
     const sheetsOpen=document.getElementById('fileUploadSheetsModal')?.classList.contains('open');
@@ -1874,7 +1891,7 @@ function startFileUploadAutoSync(){
       }
     }catch(e){}
     finally{fileUploadSyncBusy=false;}
-  },700);
+  },350);
 }
 function stopFileUploadAutoSync(){clearInterval(fileUploadSyncTimer);clearInterval(fileUploadLockListTimer);fileUploadSyncTimer=null;fileUploadLockListTimer=null;}
 
