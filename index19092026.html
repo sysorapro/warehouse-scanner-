@@ -2509,7 +2509,8 @@ function handleShelfLinkScanResult(rawText){
   fileUploadTargetIndex = -1;
   const raw = rawText.trim();
   if (i < 0 || !shelfLinkList[i]){ stopScan(); return; }
-  const match = shelfLookup[raw];
+  const found = findShelfMatch(raw);
+  const match = found ? found.match : null;
   if (!shelfLookupLoaded || !match){
     playErrorSound();
     if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
@@ -3348,8 +3349,16 @@ async function startScan(target){
   if (target === 'item' && !itemLookupLoaded){
     loadItemLookup();
   }
-  if ((target === 'shelf' || target === 'shelfLink') && !shelfLookupLoaded){
-    loadShelfLookup();
+  if ((target === 'shelf' || target === 'shelfLink' || target === 'fileUpload') && !shelfLookupLoaded){
+    // Wait (briefly) for the shelf table before opening the camera: the
+    // Private File screen rejects any code that isn't in this table, so
+    // scanning with an empty table looks exactly like "scanning is broken".
+    const ready = await ensureShelfLookupReady(5000);
+    if (!ready && (target === 'shelfLink' || target === 'fileUpload')){
+      toast(lang === 'ar'
+        ? 'تحذير: جدول الأرفف مش متحمّل — كل مسح هيترفض لحد ما تعمل تحديث للبيانات'
+        : 'Warning: shelf table not loaded — every scan will be rejected until you sync data', 'warning');
+    }
   }
 
   const hasNativeDetector = ('BarcodeDetector' in window);
@@ -3417,7 +3426,12 @@ async function startScan(target){
   html5QrCode.start(
     { facingMode: "environment" },
     config,
-    (decodedText) => { onScanSuccess(decodedText); },
+    (decodedText) => {
+      try{
+        const r = onScanSuccess(decodedText);
+        if (r && typeof r.catch === 'function') r.catch(err => console.error('scan handler error:', err));
+      }catch(err){ console.error('scan handler error:', err); }
+    },
     (err) => { /* ignore per-frame no-match */ }
   ).then(()=>{
     // Flash starts off; it only turns on if the room is dark (auto) or the
@@ -3431,6 +3445,7 @@ async function startScan(target){
   });
 }
 
+let nativeResumeLoop = null;
 async function startNativeScan(){
   usingNativeDetector = true;
 
@@ -3467,10 +3482,26 @@ async function startNativeScan(){
     try{
       const codes = await detector.detect(video);
       if (codes && codes.length > 0 && codes[0].rawValue){
-        onScanSuccess(codes[0].rawValue);
-        return; // onScanSuccess() calls stopScan(), which tears the stream down
+        // If onScanSuccess() throws, the loop used to die while the camera
+        // stayed on — the exact "camera opens but scanning does nothing"
+        // symptom. Now any failure re-arms the loop instead.
+        try{
+          const r = onScanSuccess(codes[0].rawValue);
+          if (r && typeof r.catch === 'function'){
+            r.catch(err => { console.error('scan handler error:', err); nativeResumeLoop(); });
+          }
+        }catch(err){
+          console.error('scan handler error:', err);
+          nativeResumeLoop();
+        }
+        return; // a successful scan calls stopScan(), which tears the stream down
       }
     }catch(e){ /* transient per-frame decode error — just try the next frame */ }
+    nativeDetectLoopId = requestAnimationFrame(loop);
+  };
+  nativeResumeLoop = () => {
+    if (!usingNativeDetector) return;
+    if (nativeDetectLoopId) cancelAnimationFrame(nativeDetectLoopId);
     nativeDetectLoopId = requestAnimationFrame(loop);
   };
   nativeDetectLoopId = requestAnimationFrame(loop);
@@ -3768,6 +3799,58 @@ async function manualShelfEntry(){
   }
 }
 
+
+/* ============================================================
+   Private File scan hardening (shelf lookup + resumable camera)
+   ============================================================ */
+// Shelf codes can arrive from the scanner with a different letter case,
+// stray spaces, or invisible RTL/LTR marks. The main screen was tolerant
+// (it accepts a code when the shelf table has not loaded yet); the Private
+// File screen was not, so every scan there ended as "shelf not found".
+function normalizeShelfKey(v){
+  return String(v == null ? '' : v)
+    .replace(/[\u200b-\u200f\u202a-\u202e\uFEFF]/g, '')
+    .replace(/\s+/g, '')
+    .trim()
+    .toUpperCase();
+}
+let shelfLookupNormIndex = null;
+let shelfLookupNormSource = null;
+function findShelfMatch(raw){
+  if (!shelfLookup || typeof shelfLookup !== 'object') return null;
+  const direct = String(raw == null ? '' : raw).trim();
+  if (shelfLookup[direct]) return { key: direct, match: shelfLookup[direct] };
+  if (shelfLookupNormSource !== shelfLookup){
+    shelfLookupNormIndex = {};
+    for (const k in shelfLookup){ shelfLookupNormIndex[normalizeShelfKey(k)] = k; }
+    shelfLookupNormSource = shelfLookup;
+  }
+  const hit = shelfLookupNormIndex[normalizeShelfKey(direct)];
+  return hit ? { key: hit, match: shelfLookup[hit] } : null;
+}
+// Make sure the shelf table is actually in memory before the camera opens,
+// with a hard timeout so an offline device never blocks the scanner.
+async function ensureShelfLookupReady(ms){
+  if (shelfLookupLoaded) return true;
+  try{
+    await Promise.race([
+      loadShelfLookup(true).catch(()=>{}),
+      new Promise(r => setTimeout(r, ms || 5000))
+    ]);
+  }catch(e){}
+  return !!shelfLookupLoaded;
+}
+// Re-arm the camera after a rejected scan instead of closing it, so the user
+// can simply aim at another label. Works for both the native BarcodeDetector
+// path and the html5-qrcode fallback.
+let lastRejectedScan = { code:'', at:0 };
+function rearmPrivateScan(i){
+  privateShelfPendingIndex = i;
+  shelfLinkTargetIndex = i;
+  scanTarget = 'shelfLink';
+  if (usingNativeDetector && typeof nativeResumeLoop === 'function') nativeResumeLoop();
+}
+
 async function onScanSuccess(text){
   if (privateShelfPendingIndex >= 0){
     const i = privateShelfPendingIndex;
@@ -3775,17 +3858,40 @@ async function onScanSuccess(text){
     shelfLinkTargetIndex = -1;
     const raw = String(text || '').trim();
     if (i < 0 || !shelfLinkList[i]){ stopScan(); return; }
-    const match = shelfLookup[raw];
-    if (!shelfLookupLoaded || !match){
+    // The camera now stays open after a rejected code, so ignore the same
+    // rejected label for a moment instead of firing a toast every frame.
+    if (raw && raw === lastRejectedScan.code && (Date.now() - lastRejectedScan.at) < 1500){
+      rearmPrivateScan(i);
+      return;
+    }
+    const found = findShelfMatch(raw);
+    const match = found ? found.match : null;
+    if (!shelfLookupLoaded){
+      // The shelf table never loaded on this device, so nothing could ever
+      // match. Say that plainly instead of blaming the scanned label, and
+      // keep the camera open.
+      playErrorSound();
+      if (navigator.vibrate) navigator.vibrate([80,60,80]);
+      toast(lang === 'ar'
+        ? 'جدول الأرفف مش متحمّل على الجهاز — اعمل "تحديث البيانات" وجرّب تاني'
+        : 'Shelf table is not loaded on this device — run "Sync Data Now" and try again', 'error');
+      ensureShelfLookupReady(8000);
+      lastRejectedScan = { code: raw, at: Date.now() };
+      rearmPrivateScan(i);
+      return;
+    }
+    if (!match){
       playErrorSound();
       if (navigator.vibrate) navigator.vibrate([80,60,80]);
       toast(t('errShelfLinkNotFound', raw), 'error');
-      stopScan();
+      lastRejectedScan = { code: raw, at: Date.now() };
+      rearmPrivateScan(i); // camera stays open — aim at another label
       return;
     }
+    const shelfCode = found.key;
     const now = new Date();
     shelfLinkList[i] = {
-      ...shelfLinkList[i], shelf:raw,
+      ...shelfLinkList[i], shelf:shelfCode,
       whn:match.whn||'', typ:match.typ||'', bt:match.bt||'',
       stockIndicator:match.stockIndicator||'', stockRemoval:match.stockRemoval||'',
       stockPlacement:match.stockPlacement||'', stoLocation:match.stoLocation||'',
@@ -3795,11 +3901,18 @@ async function onScanSuccess(text){
       scanDate:now.toLocaleDateString('en-GB'),
       scanTime:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
     };
-    saveShelfLinkList();
-    renderShelfLinkList();
+    try{
+      saveShelfLinkList();
+      renderShelfLinkList();
+    }catch(err){
+      console.error('Private File save/render error:', err);
+      toast(lang === 'ar' ? 'تعذر حفظ نتيجة المسح' : 'Unable to save the scan result', 'error');
+      stopScan();
+      return;
+    }
     if(navigator.vibrate)navigator.vibrate(80);
     playScanSuccessSound();
-    toast(t('toastShelfLinkScanned',raw),'success');
+    toast(t('toastShelfLinkScanned',shelfCode),'success');
     stopScan();
     return;
   }
@@ -3887,6 +4000,7 @@ function stopScan(){
 
   if (usingNativeDetector){
     setTorch(false);
+    nativeResumeLoop = null;
     if (nativeDetectLoopId){ cancelAnimationFrame(nativeDetectLoopId); nativeDetectLoopId = null; }
     if (nativeStream){
       nativeStream.getTracks().forEach(tr => tr.stop());
