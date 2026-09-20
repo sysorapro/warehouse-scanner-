@@ -538,7 +538,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> V4.0 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -587,7 +587,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> V4.0 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -610,7 +610,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> V4.0 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -802,7 +802,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> V5.9.1-scanfix © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> V4.0 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1044,7 +1044,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v4';
+const APP_VERSION='V4';
 const APP_VERSION_DATE='2026-09-20';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -6616,7 +6616,7 @@ function applyLoginLanguage(){
   updateLoginThemeButton();
 }
 
-/* ==== PWD-START: password verifier support (added in v4) ====
+/* ==== PWD-START: password verifier support (added in V4) ====
    The password column of users.csv may hold EITHER
      1) the plain password (legacy)                 e.g.  1234
      2) a salted PBKDF2-SHA256 verifier             e.g.  pbkdf2$210000$<32 hex salt>$<64 hex hash>
