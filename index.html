@@ -2214,7 +2214,7 @@ function getFileUploadReportShownRows(){
   const ar2=diagIsAr();
   const del=v=>v==='OK'?'OK':(v==='PARTIAL'?(ar2?'جزئي':'Partial'):'');
   const srcTxt=v=>v==='archived'?(ar2?'أرشيف':'Archived'):(ar2?'حالي':'Current');
-  const cells=r=>[r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,del(r.deletion),r.deletionDate,srcTxt(r.source)];
+  const cells=r=>[r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,r.scanned,del(r.deletion),r.deletionDate,srcTxt(r.source)];
   return fuReport.rows.filter(r=>!q||cells(r).some(c=>String(c).toLowerCase().indexOf(q)>=0)).map(r=>({row:r,cells:cells(r)}));
 }
 function buildFileUploadReportPdfHtml(shown){
