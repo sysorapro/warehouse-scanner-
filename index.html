@@ -2214,7 +2214,7 @@ function getFileUploadReportShownRows(){
   const ar2=diagIsAr();
   const del=v=>v==='OK'?'OK':(v==='PARTIAL'?(ar2?'جزئي':'Partial'):'');
   const srcTxt=v=>v==='archived'?(ar2?'أرشيف':'Archived'):(ar2?'حالي':'Current');
-  const cells=r=>[r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,del(r.scanned),del(r.deletion),r.deletionDate,srcTxt(r.source)];
+  const cells=r=>[r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,del(r.deletion),r.deletionDate,srcTxt(r.source)];
   return fuReport.rows.filter(r=>!q||cells(r).some(c=>String(c).toLowerCase().indexOf(q)>=0)).map(r=>({row:r,cells:cells(r)}));
 }
 function buildFileUploadReportPdfHtml(shown){
@@ -2250,7 +2250,7 @@ const FILEUPLOAD_REPORT_MANAGER_SEES_ALL=false;
 function userTypeIs(name){return String((currentAuthenticatedUser&&currentAuthenticatedUser.type)||'').trim().toLowerCase()===name;}
 function isManagerUser(){return userTypeIs('manager');}
 function canViewFileUploadReport(){return userTypeIs('admin')||userTypeIs('manager');}
-const FU_REPORT_COLUMNS=['Department','SheetNo.','SheetName','ActionType','Upload date','PersonalName','Employee Name','Trans.Date','Trans.Time','Scanned','Deletion','Deletion date','Source'];
+const FU_REPORT_COLUMNS=['Department','SheetNo.','SheetName','ActionType','Upload date','PersonalName','Employee Name','Trans.Date','Trans.Time','Deletion','Deletion date','Source'];
 let fuReport={rows:[],totals:null,itemsBySheet:{},loadedAt:0,state:'idle',error:'',scopeNote:'',namesOk:true};
 let fuDetailSheetNo='';
 
@@ -2429,7 +2429,7 @@ function renderFileUploadReportTable(){
     const q=String((document.getElementById('fuReportSearch')||{}).value||'').trim().toLowerCase();
     const del=v=>v==='OK'?'OK':(v==='PARTIAL'?(ar?'جزئي':'Partial'):'');
     const srcTxt=v=>v==='archived'?(ar?'أرشيف':'Archived'):(ar?'حالي':'Current');
-    const cells=r=>[r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,del(r.Scanned),del(r.deletion),r.deletionDate,srcTxt(r.source)];
+    const cells=r=>[r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,del(r.deletion),r.deletionDate,srcTxt(r.source)];
     const shown=fuReport.rows.filter(r=>!q||cells(r).some(c=>String(c).toLowerCase().indexOf(q)>=0));
     if(sum){
       const T=fuReport.totals||{sheets:0,transferred:0,deleted:0,archived:0};
