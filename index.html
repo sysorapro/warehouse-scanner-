@@ -2250,7 +2250,7 @@ const FILEUPLOAD_REPORT_MANAGER_SEES_ALL=false;
 function userTypeIs(name){return String((currentAuthenticatedUser&&currentAuthenticatedUser.type)||'').trim().toLowerCase()===name;}
 function isManagerUser(){return userTypeIs('manager');}
 function canViewFileUploadReport(){return userTypeIs('admin')||userTypeIs('manager');}
-const FU_REPORT_COLUMNS=['Department','SheetNo.','SheetName','ActionType','Upload date','PersonalName','Employee Name','Trans.Date','Trans.Time','Deletion','Deletion date','Source'];
+const FU_REPORT_COLUMNS=['Department','SheetNo.','SheetName','ActionType','Upload date','PersonalName','Employee Name','Trans.Date','Trans.Time','Scanned','Deletion','Deletion date','Source'];
 let fuReport={rows:[],totals:null,itemsBySheet:{},loadedAt:0,state:'idle',error:'',scopeNote:'',namesOk:true};
 let fuDetailSheetNo='';
 
