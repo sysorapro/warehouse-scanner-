@@ -548,7 +548,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v5.17 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -597,7 +597,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v5.17 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -620,7 +620,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v5.17 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -817,7 +817,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v5.17 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1157,7 +1157,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v5.17';
+const APP_VERSION='v5.18';
 const APP_VERSION_DATE='2026-09-26';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -3346,7 +3346,8 @@ async function markFileUploadItemsScannedOnShare(sheetNo,list){
 // opens the file and lists what looks wrong, grouped by row, and lets an admin fix or delete each
 // row directly — nothing is changed automatically; every fix is a value the admin typed and saved,
 // or an explicit delete, the same spirit as the offline archiving tool.
-const FU_DATE_RE=/^\d{1,2}\/\d{1,2}\/\d{4}$/;
+const FU_DATE_RE=/^\d{1,2}\/\d{1,2}\/\d{4}$/; // date-only — Trans.Date (it has its own separate Trans.Time)
+const FU_DATETIME_RE=/^\d{1,2}\/\d{1,2}\/\d{4}\s\d{1,2}:\d{2}(:\d{2})?$/; // date+time — Upload date, Deletion date
 const FU_TIME_RE=/^\d{1,2}:\d{2}(:\d{2})?$/;
 const FU_INTEGRITY_MAX_LISTED=200;
 let fuIntegrityBusy=false, fuIntegrityLastReport=null;
@@ -3381,8 +3382,9 @@ async function runFileUploadIntegrityCheck(){
       const problems=[];
       if(row.length!==headerCount)problems.push(ar?('عدد الأعمدة '+row.length+' بدل '+headerCount):('Column count '+row.length+' instead of '+headerCount));
       const checkDate=(i,label)=>{if(i<0)return;const v=String(row[i]??'').trim();if(v&&!FU_DATE_RE.test(v))problems.push((ar?'تاريخ غير صحيح في ':'Invalid date in ')+label+': "'+v+'"');};
+      const checkDateTime=(i,label)=>{if(i<0)return;const v=String(row[i]??'').trim();if(v&&!FU_DATETIME_RE.test(v))problems.push((ar?'تاريخ/وقت غير صحيح في ':'Invalid date/time in ')+label+': "'+v+'"');};
       const checkTime=(i,label)=>{if(i<0)return;const v=String(row[i]??'').trim();if(v&&!FU_TIME_RE.test(v))problems.push((ar?'وقت غير صحيح في ':'Invalid time in ')+label+': "'+v+'"');};
-      checkDate(cUpload,'Upload date'); checkDate(cTransDate,'Trans.Date'); checkDate(cDeletionDate,'Deletion date');
+      checkDateTime(cUpload,'Upload date'); checkDate(cTransDate,'Trans.Date'); checkDateTime(cDeletionDate,'Deletion date');
       checkTime(cTransTime,'Trans.Time');
       // The row's exact original cells are kept so a later save/delete can verify nothing else
       // changed the same row in the meantime (re-fetched and compared right before writing).
@@ -3459,11 +3461,10 @@ async function fuIntegrityRowStillMatches(rowNumber,originalValues){
   return{matrix,current,rIdx,same,missing:false};
 }
 function fuPad2(n){n=String(n);return n.length<2?('0'+n):n;}
-// Reformats a date to DD/MM/YYYY when it's a recognizable alternate shape (ISO yyyy-mm-dd,
-// an ISO date+time crammed into a date-only field by the old faulty build — e.g. "2026-09-24
-// 09:10:32" — dot/dash separators, 2-digit year). A value that doesn't match any known shape
-// at all is cleared rather than guessed — an empty date is not flagged as invalid, only a
-// malformed one is.
+// Reformats a date-only value (Trans.Date) to DD/MM/YYYY when it's a recognizable alternate
+// shape (ISO yyyy-mm-dd, dot/dash separators, 2-digit year, or an ISO date+time mistakenly
+// placed in this field — the time is dropped since Trans.Date has its own separate Trans.Time).
+// A value that doesn't match any known shape at all is cleared rather than guessed.
 function fuAutoFixDate(v){
   const s=String(v??'').trim();
   if(!s||FU_DATE_RE.test(s))return s;
@@ -3472,6 +3473,23 @@ function fuAutoFixDate(v){
   if((m=/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/.exec(s)))return fuPad2(m[3])+'/'+fuPad2(m[2])+'/'+m[1];
   if((m=/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/.exec(s)))return fuPad2(m[1])+'/'+fuPad2(m[2])+'/'+m[3];
   if((m=/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2})$/.exec(s)))return fuPad2(m[1])+'/'+fuPad2(m[2])+'/'+(2000+ +m[3]);
+  return '';
+}
+// Reformats a date+time value (Upload date, Deletion date) to "DD/MM/YYYY HH:MM:SS" when it's a
+// recognizable alternate shape (ISO yyyy-mm-dd[ T]hh:mm[:ss], dot/dash date separators). A value
+// that's a valid date but has NO time at all gets a default 00:00:00 attached, since these two
+// fields must carry both — the original time can't be recovered, but the shape is completed
+// rather than the row being left permanently flagged. Anything unrecognizable is cleared.
+function fuAutoFixDateTime(v){
+  const s=String(v??'').trim();
+  if(!s||FU_DATETIME_RE.test(s))return s;
+  let m;
+  if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s)))
+    return fuPad2(m[3])+'/'+fuPad2(m[2])+'/'+m[1]+' '+fuPad2(m[4])+':'+fuPad2(m[5])+':'+(m[6]?fuPad2(m[6]):'00');
+  if((m=/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})[ ,T](\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s)))
+    return fuPad2(m[1])+'/'+fuPad2(m[2])+'/'+m[3]+' '+fuPad2(m[4])+':'+fuPad2(m[5])+':'+(m[6]?fuPad2(m[6]):'00');
+  if(FU_DATE_RE.test(s))return s+' 00:00:00';
+  if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s)))return fuPad2(m[3])+'/'+fuPad2(m[2])+'/'+m[1]+' 00:00:00';
   return '';
 }
 function fuAutoFixTime(v){
@@ -3485,8 +3503,8 @@ async function fuIntegrityAutoFixAll(){
   const ar=diagIsAr(),rep=fuIntegrityLastReport;
   if(!rep||!rep.issues.length)return;
   const proceed=await customConfirm(ar
-    ?('هل تريد إصلاح كل الصفوف المعيبة تلقائيًا؟ ('+rep.issues.length+' صف)\nسيتم توحيد عدد الأعمدة، وتصحيح صيغة أي تاريخ/وقت معروف الشكل، ومسح أي تاريخ/وقت غير مفهوم تمامًا.')
-    :('Auto-fix all flagged rows? ('+rep.issues.length+' row(s))\nColumn counts will be normalized, recognizable date/time formats corrected, and anything unreadable cleared.'));
+    ?('هل تريد إصلاح كل الصفوف المعيبة تلقائيًا؟ ('+rep.issues.length+' صف)\nسيتم توحيد عدد الأعمدة، وتصحيح صيغة أي تاريخ/وقت معروف الشكل، وإضافة 00:00:00 كوقت افتراضي لأي Upload date أو Deletion date من غير وقت، ومسح أي قيمة غير مفهومة تمامًا.')
+    :('Auto-fix all flagged rows? ('+rep.issues.length+' row(s))\nColumn counts will be normalized, recognizable date/time formats corrected, a default 00:00:00 time attached to any Upload date or Deletion date missing one, and anything unreadable cleared.'));
   if(!proceed)return;
   if(!(await ensureNotBelowMinVersion()))return;
   for(let attempt=0;attempt<5;attempt++){
@@ -3508,9 +3526,9 @@ async function fuIntegrityAutoFixAll(){
       if(!same){skipped++;return;} // changed elsewhere since the check — leave it, it'll show up on re-check
       const row=nowRaw.slice(0,headerCount);
       while(row.length<headerCount)row.push('');
-      if(cUpload>=0)row[cUpload]=fuAutoFixDate(row[cUpload]);
+      if(cUpload>=0)row[cUpload]=fuAutoFixDateTime(row[cUpload]);
       if(cTransDate>=0)row[cTransDate]=fuAutoFixDate(row[cTransDate]);
-      if(cDeletionDate>=0)row[cDeletionDate]=fuAutoFixDate(row[cDeletionDate]);
+      if(cDeletionDate>=0)row[cDeletionDate]=fuAutoFixDateTime(row[cDeletionDate]);
       if(cTransTime>=0)row[cTransTime]=fuAutoFixTime(row[cTransTime]);
       matrix[rIdx]=row;
       fixedCount++;
