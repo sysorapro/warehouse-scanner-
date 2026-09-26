@@ -548,7 +548,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v5.14 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -597,7 +597,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v5.14 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -620,7 +620,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v5.14 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -700,7 +700,7 @@ window.DATA_GITHUB_CONFIG = {
 
         <div class="menu-group-title" data-i18n="menuGroupUpdate">Update Data</div>
         <button onclick="forceSyncNow(); toggleMoreMenu();">🔄 <span data-i18n="menuSyncNow">Sync Data Now</span></button>
-           
+
         <div class="menu-group-title" data-i18n="menuGroupBackup">Backup</div>
         <button onclick="openBackupScreen(); toggleMoreMenu();">💾 <span data-i18n="menuBackup">Backup &amp; Restore</span></button>
 
@@ -817,7 +817,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v5.14 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1157,8 +1157,8 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v5.14';
-const APP_VERSION_DATE='2026-09-25';
+const APP_VERSION='v5.17';
+const APP_VERSION_DATE='2026-09-26';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
 let diagRateMem=null, diagRateSavedAt=0, diagStoragePersisted=null, diagLastSaveToastAt=0, diagLastRows=[];
@@ -2407,7 +2407,7 @@ async function loadFileUploadReport(){
     const itemsBySheet={};
     Object.keys(repCurrent.itemsBySheet).forEach(k=>{itemsBySheet[k]=(itemsBySheet[k]||[]).concat(repCurrent.itemsBySheet[k]);});
     Object.keys(repArchived.itemsBySheet).forEach(k=>{itemsBySheet[k]=(itemsBySheet[k]||[]).concat(repArchived.itemsBySheet[k]);});
-    fuReport={rows,totals,itemsBySheet,loadedAt:Date.now(),state:'ready',error:'',namesOk:names.ok,archiveOk,
+    fuReport={rows,totals,itemsBySheet,loadedAt:Date.now(),state:'ready',error:'',namesOk:names.ok,archiveOk,userNamesMap:names.map,
       scopeNote:(all?(ar?'كل الأقسام':'All departments'):((ar?'قسم: ':'Department: ')+myDept))};
   }catch(e){
     try{diagLogError('report',e);}catch(_){}
@@ -2458,14 +2458,21 @@ function renderFileUploadReportTable(){
 
 
 // ---- clicking a sheet row: full item-level detail for that one sheet ----
-const FU_DETAIL_COLUMNS=['Item Code','Item Name','ActionType','PersonalName','Upload date','Trans.Date','Trans.Time','Deletion','Deletion date','Source'];
+const FU_DETAIL_COLUMNS=['Item Code','Item Name','ActionType','PersonalName','Employee Name','Upload date','Trans.Date','Trans.Time','Scanned','Deletion','Deletion date','Source'];
 function fuDetailItemsFor(sheetNo){
   return (fuReport.itemsBySheet&&fuReport.itemsBySheet[String(sheetNo||'').trim()])||[];
 }
 function fuDetailCells(items){
   const ar=diagIsAr();
+  const names=fuReport.userNamesMap||{};
   const srcTxt=v=>v==='archived'?(ar?'أرشيف':'Archived'):(ar?'حالي':'Current');
-  return items.map(r=>[r.itemCode,r.itemName,r.actionType,r.personalName,r.uploadDate,r.transDate,r.transTime,String(r.deletion||'').trim().toUpperCase()==='OK'?'OK':'',r.deletionDate,srcTxt(r.source)]);
+  return items.map(r=>{
+    const pn=String(r.personalName||'').trim();
+    const emp=pn?(names[pn.toLowerCase()]||''):'';
+    return [r.itemCode,r.itemName,r.actionType,r.personalName,emp,r.uploadDate,r.transDate,r.transTime,
+      String(r.scannedFlag||'').trim().toUpperCase()==='OK'?'OK':'',
+      String(r.deletion||'').trim().toUpperCase()==='OK'?'OK':'',r.deletionDate,srcTxt(r.source)];
+  });
 }
 function fuSheetSummaryRow(sheetNo){
   return fuReport.rows.find(r=>r.sheetNo===String(sheetNo||'').trim())||null;
@@ -3333,11 +3340,12 @@ async function markFileUploadItemsScannedOnShare(sheetNo,list){
     catch(e){ try{diagLogError('scanned-flag-backup',e);}catch(_){} }
   }catch(e){}
 }
-// ================= FileUploade.csv integrity check (Admin, read-only) =================
+// ================= FileUploade.csv integrity check (Admin) =================
 // After the corruption incident, some rows an old build wrote may still not match the correct
-// structure (extra/missing columns, dates not in the DD/MM/YYYY shape this app writes). This tool
-// only opens the file and lists what looks wrong, grouped by row — it never changes the file. An
-// admin reviews and fixes each row by hand, the same spirit as the offline archiving tool.
+// structure (extra/missing columns, dates not in the DD/MM/YYYY shape this app writes). The tool
+// opens the file and lists what looks wrong, grouped by row, and lets an admin fix or delete each
+// row directly — nothing is changed automatically; every fix is a value the admin typed and saved,
+// or an explicit delete, the same spirit as the offline archiving tool.
 const FU_DATE_RE=/^\d{1,2}\/\d{1,2}\/\d{4}$/;
 const FU_TIME_RE=/^\d{1,2}:\d{2}(:\d{2})?$/;
 const FU_INTEGRITY_MAX_LISTED=200;
@@ -3376,9 +3384,11 @@ async function runFileUploadIntegrityCheck(){
       const checkTime=(i,label)=>{if(i<0)return;const v=String(row[i]??'').trim();if(v&&!FU_TIME_RE.test(v))problems.push((ar?'وقت غير صحيح في ':'Invalid time in ')+label+': "'+v+'"');};
       checkDate(cUpload,'Upload date'); checkDate(cTransDate,'Trans.Date'); checkDate(cDeletionDate,'Deletion date');
       checkTime(cTransTime,'Trans.Time');
-      if(problems.length)issues.push({rowNumber:r+1,sheetNo:cSheetNo>=0?String(row[cSheetNo]??'').trim():'',problems});
+      // The row's exact original cells are kept so a later save/delete can verify nothing else
+      // changed the same row in the meantime (re-fetched and compared right before writing).
+      if(problems.length)issues.push({rowNumber:r+1,sheetNo:cSheetNo>=0?String(row[cSheetNo]??'').trim():'',problems,values:row.slice()});
     }
-    fuIntegrityLastReport={at:Date.now(),headerCount,totalRows:matrix.length-1,issues};
+    fuIntegrityLastReport={at:Date.now(),header,headerCount,totalRows:matrix.length-1,issues};
   }catch(e){
     fuIntegrityLastReport=null;
     if(box){box.textContent='';const l=document.createElement('div');l.style.cssText='font-size:12.5px;color:var(--red);';l.textContent=(ar?'تعذر تحميل FileUploade.csv — ':'Could not load FileUploade.csv — ')+((e&&e.message)||'');box.appendChild(l);
@@ -3401,13 +3411,30 @@ function renderFileUploadIntegrityReport(){
   summary.textContent=(ar?'تم فحص ':'Checked ')+diagLtr(String(rep.totalRows))+(ar?' صف — ':' rows — ')+
     (rep.issues.length?(diagLtr(String(rep.issues.length))+(ar?' صف فيه مشكلة':' row(s) with issues')):(ar?'لا توجد مشاكل ✓':'No issues found ✓'));
   box.appendChild(summary);
-  rep.issues.slice(0,FU_INTEGRITY_MAX_LISTED).forEach(x=>{
+  if(rep.issues.length){
+    const fixAllBar=document.createElement('div');fixAllBar.style.cssText='margin-bottom:10px;';
+    const fixAllBtn=document.createElement('button');fixAllBtn.type='button';fixAllBtn.className='no-sound';
+    fixAllBtn.textContent=ar?('🛠 إصلاح كل الصفوف تلقائيًا ('+rep.issues.length+')'):('🛠 Auto-fix all rows ('+rep.issues.length+')');
+    fixAllBtn.style.cssText='width:100%;padding:10px 6px;border-radius:10px;border:none;background:var(--accent, #2f80ed);color:#fff;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;';
+    fixAllBtn.onclick=fuIntegrityAutoFixAll;
+    fixAllBar.appendChild(fixAllBtn);
+    const note=document.createElement('div');note.style.cssText='font-size:11px;color:var(--muted);margin-top:4px;';
+    note.textContent=ar?'هيوحّد عدد الأعمدة، ويصحح صيغة أي تاريخ/وقت معروف الشكل، ويمسح أي تاريخ/وقت غير مفهوم تمامًا فقط':'Normalizes column counts, corrects any recognizable date/time format, and clears only a date/time that cannot be understood at all';
+    fixAllBar.appendChild(note);
+    box.appendChild(fixAllBar);
+  }
+  rep.issues.slice(0,FU_INTEGRITY_MAX_LISTED).forEach((x,i)=>{
     const wrap=document.createElement('div');wrap.style.cssText='padding:8px 0;border-bottom:1px solid var(--border);';
     const l=document.createElement('div');l.style.cssText='font-size:11px;color:var(--muted);margin-bottom:2px;';
     l.textContent=(ar?'صف ':'Row ')+x.rowNumber+(x.sheetNo?(' · '+(ar?'الشيت ':'Sheet ')+x.sheetNo):'');
     const v=document.createElement('div');v.style.cssText='font-size:12.5px;color:var(--red);white-space:pre-line;';
     v.textContent=x.problems.join('\n');
-    wrap.appendChild(l);wrap.appendChild(v);box.appendChild(wrap);
+    wrap.appendChild(l);wrap.appendChild(v);
+    const actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;padding-top:6px;flex-wrap:wrap;';
+    const mkSmall=(txt,fn,color)=>{const b=document.createElement('button');b.type='button';b.textContent=txt;b.className='no-sound';b.style.cssText='padding:6px 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:'+(color||'var(--text)')+';font-family:Tajawal,sans-serif;font-size:12px;';b.onclick=fn;return b;};
+    actions.appendChild(mkSmall(ar?'🗑 حذف الصف':'🗑 Delete row',()=>fuIntegrityDeleteRow(i),'var(--red)'));
+    wrap.appendChild(actions);
+    box.appendChild(wrap);
   });
   if(rep.issues.length>FU_INTEGRITY_MAX_LISTED){
     const more=document.createElement('div');more.style.cssText='font-size:11.5px;color:var(--muted);padding:6px 0;';
@@ -3419,6 +3446,121 @@ function renderFileUploadIntegrityReport(){
   bar.appendChild(mk(ar?'إعادة الفحص':'Re-check',runFileUploadIntegrityCheck));
   bar.appendChild(mk(ar?'نسخ التقرير':'Copy report',fuIntegrityCopyReport));
   box.appendChild(bar);
+}
+// Re-fetches the file fresh and only writes if the target row's raw cells still match exactly
+// what the report showed — protects against fixing a row that someone else already changed.
+async function fuIntegrityRowStillMatches(rowNumber,originalValues){
+  const current=await githubGetFile(FILE_UPLOAD_GITHUB_PATH);
+  const matrix=parseCSVMatrix(current.text);
+  const rIdx=rowNumber-1;
+  if(rIdx<1||rIdx>=matrix.length)return{matrix,current,rIdx,same:false,missing:true};
+  const nowRaw=matrix[rIdx];
+  const same=nowRaw.length===originalValues.length && nowRaw.every((v,i)=>String(v??'')===String(originalValues[i]??''));
+  return{matrix,current,rIdx,same,missing:false};
+}
+function fuPad2(n){n=String(n);return n.length<2?('0'+n):n;}
+// Reformats a date to DD/MM/YYYY when it's a recognizable alternate shape (ISO yyyy-mm-dd,
+// an ISO date+time crammed into a date-only field by the old faulty build — e.g. "2026-09-24
+// 09:10:32" — dot/dash separators, 2-digit year). A value that doesn't match any known shape
+// at all is cleared rather than guessed — an empty date is not flagged as invalid, only a
+// malformed one is.
+function fuAutoFixDate(v){
+  const s=String(v??'').trim();
+  if(!s||FU_DATE_RE.test(s))return s;
+  let m;
+  if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})[T ]\d{1,2}:\d{2}(:\d{2})?$/.exec(s)))return fuPad2(m[3])+'/'+fuPad2(m[2])+'/'+m[1];
+  if((m=/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/.exec(s)))return fuPad2(m[3])+'/'+fuPad2(m[2])+'/'+m[1];
+  if((m=/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/.exec(s)))return fuPad2(m[1])+'/'+fuPad2(m[2])+'/'+m[3];
+  if((m=/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2})$/.exec(s)))return fuPad2(m[1])+'/'+fuPad2(m[2])+'/'+(2000+ +m[3]);
+  return '';
+}
+function fuAutoFixTime(v){
+  const s=String(v??'').trim();
+  if(!s||FU_TIME_RE.test(s))return s;
+  let m;
+  if((m=/^(\d{1,2})[.](\d{2})(?:[.](\d{2}))?$/.exec(s)))return fuPad2(m[1])+':'+fuPad2(m[2])+(m[3]?(':'+fuPad2(m[3])):'');
+  return '';
+}
+async function fuIntegrityAutoFixAll(){
+  const ar=diagIsAr(),rep=fuIntegrityLastReport;
+  if(!rep||!rep.issues.length)return;
+  const proceed=await customConfirm(ar
+    ?('هل تريد إصلاح كل الصفوف المعيبة تلقائيًا؟ ('+rep.issues.length+' صف)\nسيتم توحيد عدد الأعمدة، وتصحيح صيغة أي تاريخ/وقت معروف الشكل، ومسح أي تاريخ/وقت غير مفهوم تمامًا.')
+    :('Auto-fix all flagged rows? ('+rep.issues.length+' row(s))\nColumn counts will be normalized, recognizable date/time formats corrected, and anything unreadable cleared.'));
+  if(!proceed)return;
+  if(!(await ensureNotBelowMinVersion()))return;
+  for(let attempt=0;attempt<5;attempt++){
+    let current;
+    try{ current=await githubGetFile(FILE_UPLOAD_GITHUB_PATH); }
+    catch(e){ toast(ar?'تعذر تحميل الملف':'Could not load the file','warning'); return; }
+    const matrix=parseCSVMatrix(current.text);
+    const header=matrix[0],headerCount=header.length,idx={};
+    header.forEach((h,i)=>{const k=fuIntegrityNormHeader(h);if(k&&idx[k]===undefined)idx[k]=i;});
+    const col=(...names)=>{for(const n of names){const k=fuIntegrityNormHeader(n);if(idx[k]!==undefined)return idx[k];}return -1;};
+    const cUpload=col('Upload date','UploadDate'), cTransDate=col('Trans.Date','TransDate','Scan Date','Date'),
+          cDeletionDate=col('Deletion date','DeletionDate'), cTransTime=col('Trans.Time','TransTime','Scan Time','Time');
+    let fixedCount=0,skipped=0;
+    rep.issues.forEach(issue=>{
+      const rIdx=issue.rowNumber-1;
+      if(rIdx<1||rIdx>=matrix.length){skipped++;return;}
+      const nowRaw=matrix[rIdx];
+      const same=nowRaw.length===issue.values.length && nowRaw.every((v,i)=>String(v??'')===String(issue.values[i]??''));
+      if(!same){skipped++;return;} // changed elsewhere since the check — leave it, it'll show up on re-check
+      const row=nowRaw.slice(0,headerCount);
+      while(row.length<headerCount)row.push('');
+      if(cUpload>=0)row[cUpload]=fuAutoFixDate(row[cUpload]);
+      if(cTransDate>=0)row[cTransDate]=fuAutoFixDate(row[cTransDate]);
+      if(cDeletionDate>=0)row[cDeletionDate]=fuAutoFixDate(row[cDeletionDate]);
+      if(cTransTime>=0)row[cTransTime]=fuAutoFixTime(row[cTransTime]);
+      matrix[rIdx]=row;
+      fixedCount++;
+    });
+    if(!fixedCount){
+      toast(skipped?(ar?'كل الصفوف اتغيّرت من مكان تاني — أعد الفحص':'All rows changed elsewhere — re-check'):(ar?'لا يوجد صفوف لإصلاحها':'No rows to fix'),'warning');
+      if(skipped)runFileUploadIntegrityCheck();
+      return;
+    }
+    try{
+      await githubPutFile(FILE_UPLOAD_GITHUB_PATH,serializeCSVMatrix(matrix),current.sha,'Warehouse Scanner: auto-fix '+fixedCount+' malformed row(s) (integrity check)');
+      fileUploadRawTextCache=serializeCSVMatrix(matrix); fileUploadContentSHA='';
+      toast((ar?('✅ تم إصلاح '+fixedCount+' صف'):('✅ Fixed '+fixedCount+' row(s)'))+(skipped?(ar?(' — و'+skipped+' اتغيّر من مكان تاني، أعد الفحص'):(' — '+skipped+' changed elsewhere, re-check')):''),'success');
+      runFileUploadIntegrityCheck();
+      return;
+    }catch(e){
+      if(e&&e.status===409&&attempt<4)continue;
+      toast(ar?'تعذر الحفظ':'Could not save','warning');
+      return;
+    }
+  }
+}
+async function fuIntegrityDeleteRow(issueIdx){
+  const ar=diagIsAr(),rep=fuIntegrityLastReport;
+  const issue=rep&&rep.issues[issueIdx];
+  if(!issue)return;
+  const proceed=await customConfirm(ar
+    ?('هل تريد حذف هذا الصف نهائيًا؟\nصف '+issue.rowNumber+(issue.sheetNo?(' — شيت '+issue.sheetNo):''))
+    :('Delete this row permanently?\nRow '+issue.rowNumber+(issue.sheetNo?(' — sheet '+issue.sheetNo):'')));
+  if(!proceed)return;
+  if(!(await ensureNotBelowMinVersion()))return;
+  for(let attempt=0;attempt<5;attempt++){
+    let chk;
+    try{ chk=await fuIntegrityRowStillMatches(issue.rowNumber,issue.values); }
+    catch(e){ toast(ar?'تعذر تحميل الملف':'Could not load the file','warning'); return; }
+    if(chk.missing){ toast(ar?'✅ الصف محذوف بالفعل':'✅ Row already removed','success'); runFileUploadIntegrityCheck(); return; }
+    if(!chk.same){ toast(ar?'الصف اتغيّر من مكان تاني — أعد الفحص وحاول تاني':'The row changed elsewhere — re-check and try again','warning'); return; }
+    chk.matrix.splice(chk.rIdx,1);
+    try{
+      await githubPutFile(FILE_UPLOAD_GITHUB_PATH,serializeCSVMatrix(chk.matrix),chk.current.sha,'Warehouse Scanner: delete malformed row '+issue.rowNumber+' (integrity check)');
+      fileUploadRawTextCache=serializeCSVMatrix(chk.matrix); fileUploadContentSHA='';
+      toast(ar?'🗑 تم حذف الصف':'🗑 Row deleted','success');
+      runFileUploadIntegrityCheck();
+      return;
+    }catch(e){
+      if(e&&e.status===409&&attempt<4)continue;
+      toast(ar?'تعذر الحذف':'Could not delete','warning');
+      return;
+    }
+  }
 }
 function fuIntegrityCopyReport(){
   try{
