@@ -4250,7 +4250,7 @@ function renderFileUploadView(){
     `<div style="font-weight:900;font-size:13px;color:var(--text);">${escapeHtml(sheetLabel)}</div>`+
     `<div style="margin-top:4px;color:var(--muted);">${escapeHtml(sheet.department||'')} · ${sheet.rows.length} ${lang==='ar'?'صنف':'items'}</div>`+
     (sheet.transferred
-      ? `<div style="margin-top:5px;color:var(--amber-fg);">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}: ${escapeHtml(fuTransferUserLabel(sheet.transferUser))} · ${escapeHtml(sheet.transferDate||'—')} ${escapeHtml(sheet.transferTime||'')}</div>`
+            ? `<div style="margin-top:5px;color:var(--amber-fg);">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}:<br>${escapeHtml(fuTransferUserLabel(sheet.transferUser))} · ${escapeHtml(sheet.transferDate||'—')} ${escapeHtml(sheet.transferTime||'')}</div>`
       : `<div style="margin-top:5px;color:var(--mint-fg);">${lang==='ar'?'متاح للنقل إلى الملف الخاص':'Available to transfer to Private File'}</div>`);
 
   const transferBtn=sheet.transferred
@@ -4436,7 +4436,7 @@ function renderFileUploadSheetsList(){
       ? `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:10.5px;color:var(--muted);text-align:center;min-width:112px;">🔒 ${lang==='ar'?'غير نشط':'Inactive'}</div>`
       : `<button onclick="event.stopPropagation();moveFileUploadSheetToPrivate('${key}')" title="Move to Private File" style="background:var(--mint);color:#082016;border:none;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer;">📥</button>`;
     const transferInfo=transferred
-      ? `<div style="font-size:10.5px;color:var(--amber-fg);margin-top:5px;line-height:1.5;">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}: ${escapeHtml(fuTransferUserLabel(s.transferUser))} · ${escapeHtml(s.transferDate||'—')} ${escapeHtml(s.transferTime||'')}</div>`
+            ? `<div style="font-size:10.5px;color:var(--amber-fg);margin-top:5px;line-height:1.5;">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}:<br>${escapeHtml(fuTransferUserLabel(s.transferUser))} · ${escapeHtml(s.transferDate||'—')} ${escapeHtml(s.transferTime||'')}</div>`
       : `<div style="font-size:11px;color:var(--mint-fg);margin-top:4px;">${lang==='ar'?'متاح للنقل فقط':'Available for transfer only'}</div>`;
     return `<div class="file-sheet-card" data-sheet-no="${escapeHtml(String(s.sheetNo))}" onclick="openFileUploadSheet('${key}')" style="margin:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;${transferred?'opacity:.78;':''}">
       <div style="flex:1;min-width:0;">
