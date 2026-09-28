@@ -380,7 +380,7 @@ window.DATA_GITHUB_CONFIG = {
   .login-action-row{display:flex;gap:10px;align-items:stretch;margin-top:4px;direction:ltr;}
   .login-action-row .login-btn{flex:1;margin-top:0;}
   .login-bio-btn{flex:0 0 46px;width:46px;border:1px solid var(--border);border-radius:12px;transition:color .2s,border-color .2s,background .2s;background:var(--surface-2);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
-  .login-bio-btn svg{width:37px;height:37px;fill:currentColor;stroke:none;display:block;}
+  .login-bio-btn svg{width:32px;height:32px;fill:currentColor;stroke:none;display:block;}
   .login-bio-btn.ready{color:var(--mint-fg);border-color:var(--mint);background:rgba(0,0,0,0);}
   .login-bio-btn:active{background:var(--border);}
   .login-bio-btn:disabled{opacity:.5;}
@@ -556,7 +556,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -611,7 +611,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -634,7 +634,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -831,7 +831,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -8557,18 +8557,36 @@ async function refreshBiometricLoginButton(){
     btn.classList.toggle('ready',!!cred);
   }catch(e){}
 }
-async function tryBiometricLogin(){
+let biometricAutoTried=false;
+// Opens the fingerprint prompt by itself when the login screen appears at app start,
+// only if fingerprint login is enabled on this device. Runs once per app launch.
+function autoBiometricLogin(){
+  try{
+    if(biometricAutoTried)return;
+    const gate=document.getElementById('loginGate');
+    if(!gate||gate.classList.contains('hidden'))return;
+    if(!getBiometricCredFor(null))return;
+    biometricAutoTried=true;
+    setTimeout(()=>{
+      const g=document.getElementById('loginGate');
+      if(g&&!g.classList.contains('hidden'))tryBiometricLogin(true);
+    },700);
+  }catch(e){}
+}
+async function tryBiometricLogin(auto){
   const ar=diagIsAr();
   setLoginError('');
   if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){
+    if(auto)return;
     setLoginError(ar?'البصمة مش مدعومة في المتصفح ده (لازم رابط HTTPS)':'Biometric login is not supported here (HTTPS is required)');return;
   }
   const uname=String(document.getElementById('loginUsername')?.value||'').trim();
   const cred=getBiometricCredFor(uname)||getBiometricCredFor(null);
-  if(!cred){setLoginError(ar?'البصمة لسه مش مفعّلة. سجّل دخول بكلمة المرور ثم فعّلها من الملف الشخصي':'Fingerprint is not enabled yet. Sign in with your password, then enable it from My Profile');return;}
+  if(!cred){if(auto)return;setLoginError(ar?'البصمة لسه مش مفعّلة. سجّل دخول بكلمة المرور ثم فعّلها من الملف الشخصي':'Fingerprint is not enabled yet. Sign in with your password, then enable it from My Profile');return;}
   const raw=localStorage.getItem(USERS_LOCAL_PROFILE_KEY);
   let profile=null;try{profile=raw?JSON.parse(raw):null;}catch(e){}
   if(!profile||String(profile.username||'').trim().toLowerCase()!==cred.username.trim().toLowerCase()||!profile.passwordHash||String(profile.status||'').trim().toLowerCase()!=='active'){
+    if(auto)return;
     setLoginError(ar?'محتاج تسجّل دخول بكلمة المرور مرة كمان الأول':'Please sign in with your password once first');return;
   }
   const btn=document.getElementById('loginBiometricBtn');
@@ -8601,7 +8619,7 @@ async function tryBiometricLogin(){
     setResponsibleFromLoggedInUser();
     playScanSuccessSound();hideLoginGate();
   }catch(e){
-    if(e&&e.name==='NotAllowedError'){setLoginError(ar?'تم إلغاء التحقق بالبصمة':'Fingerprint verification was cancelled');return;}
+    if(e&&e.name==='NotAllowedError'){if(auto)return;setLoginError(ar?'تم إلغاء التحقق بالبصمة':'Fingerprint verification was cancelled');return;}
     setLoginError((ar?'تعذر التحقق بالبصمة':'Biometric verification failed')+' ['+((e&&e.name)||'error')+']');
   }finally{if(btn)btn.disabled=false;}
 }
@@ -9352,6 +9370,7 @@ async function initAuthentication(){
     hideLoginGate();return;
   }
   showLoginGate();
+  autoBiometricLogin();
 }
 
 // Restore the user's last saved language/theme choice, if any (defaults
