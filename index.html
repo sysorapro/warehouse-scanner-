@@ -404,6 +404,26 @@ window.DATA_GITHUB_CONFIG = {
   .login-remember input{width:16px;height:16px;margin:0;accent-color:var(--mint);cursor:pointer;}
   .login-footer{text-align:center;margin-top:18px;padding-top:13px;border-top:1px solid var(--border);color:var(--muted);font-size:11.5px;letter-spacing:.2px;}
   .login-footer b{color:var(--amber-fg);font-family:'Cairo';font-weight:800;}
+  /* Change-password screen opened from My Profile (v6.0.0) */
+  #changePasswordModal .cpw-field{margin-bottom:13px;}
+  #changePasswordModal .cpw-field label{font-family:'Cairo';font-weight:700;display:block;margin-bottom:6px;color:var(--muted);font-size:12px;}
+  #changePasswordModal .cpw-field input{
+    width:100%; background:var(--surface-2); border:1.5px dashed rgba(232,163,61,.5);
+    color:var(--text); border-radius:11px; padding:13px; font-size:14.5px;
+    font-family:'Tajawal'; outline:none; box-sizing:border-box;
+  }
+  #changePasswordModal .cpw-field input:focus{animation:neonBlink .9s ease-in-out infinite;}
+  #changePasswordModal .cpw-btn{
+    width:100%; border:none; border-radius:13px; padding:14px;
+    font-family:'Cairo'; font-weight:900; font-size:15px;
+    background:var(--mint); color:#062018; margin-top:4px; cursor:pointer;
+  }
+  #changePasswordModal .cpw-btn:disabled{opacity:.5;cursor:default;}
+  #changePasswordModal .cpw-error{
+    min-height:20px; margin:10px 0 0; text-align:center;
+    color:var(--red); font-size:12px; font-weight:700; line-height:1.5;
+  }
+
   /* Password-change screen uses the same visual system as the existing Login screen. */
   #passwordChangeGate.hidden{display:none!important;}
   #passwordChangeGate{
@@ -1061,6 +1081,39 @@ window.DATA_GITHUB_CONFIG = {
   <div style="flex:1; overflow-y:auto; padding:10px 14px 14px;" id="profileBody"></div>
 </div>
 
+<div class="modal app-modal" id="changePasswordModal">
+  <div class="modal-top">
+    <button onclick="closeChangePassword()">‹</button>
+    <span id="cpwTitle"></span>
+    <span style="width:34px;"></span>
+  </div>
+  <div style="flex:1; overflow-y:auto; padding:14px;">
+    <div class="cpw-field">
+      <label id="cpwCurrentLabel"></label>
+      <div class="password-input-wrap">
+        <input type="password" id="cpwCurrent" autocomplete="current-password">
+        <button class="password-eye-btn" id="cpwCurrentEye" type="button" onclick="togglePasswordVisibility('cpwCurrent','cpwCurrentEye')" aria-label="Show password" title="Show password"><svg class="password-eye-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.8"></circle></svg></button>
+      </div>
+    </div>
+    <div class="cpw-field">
+      <label id="cpwNewLabel"></label>
+      <div class="password-input-wrap">
+        <input type="password" id="cpwNew" autocomplete="new-password">
+        <button class="password-eye-btn" id="cpwNewEye" type="button" onclick="togglePasswordVisibility('cpwNew','cpwNewEye')" aria-label="Show password" title="Show password"><svg class="password-eye-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.8"></circle></svg></button>
+      </div>
+    </div>
+    <div class="cpw-field">
+      <label id="cpwConfirmLabel"></label>
+      <div class="password-input-wrap">
+        <input type="password" id="cpwConfirm" autocomplete="new-password">
+        <button class="password-eye-btn" id="cpwConfirmEye" type="button" onclick="togglePasswordVisibility('cpwConfirm','cpwConfirmEye')" aria-label="Show password" title="Show password"><svg class="password-eye-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.8"></circle></svg></button>
+      </div>
+    </div>
+    <div class="cpw-error" id="cpwError"></div>
+    <button class="cpw-btn no-sound" id="cpwBtn" type="button" onclick="submitChangePassword(); return false;"></button>
+  </div>
+</div>
+
 <div class="modal app-modal" id="diagModal">
   <div class="modal-top">
     <button onclick="closeDiagnostics()">‹</button>
@@ -1169,7 +1222,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v5.24';
+const APP_VERSION='v6.0.0';
 const APP_VERSION_DATE='2026-09-28';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -2121,11 +2174,88 @@ async function renderProfile(){
     bar.appendChild(send);
     bar.appendChild(mk(ar?'📋 نسخ':'📋 Copy',diagCopyReport));
     bar.appendChild(mk(ar?'🩺 حالة التطبيق والاتصال':'🩺 App & connection status',openDiagnostics));
+    const cpb=mk(ar?'🔑 تغيير كلمة المرور':'🔑 Change password',openChangePassword);
+    cpb.style.flexBasis='100%';bar.appendChild(cpb);
     box.appendChild(bar);
   }catch(e){}
 }
 
 
+
+/* ==== V6-CHANGEPWD-START: change password from My Profile (added in v6.0.0) ==== */
+function cpwText(){
+  return lang==='ar'?{
+    title:'تغيير كلمة المرور',cur:'كلمة المرور الحالية',nw:'كلمة المرور الجديدة',cf:'تأكيد كلمة المرور الجديدة',
+    save:'حفظ كلمة المرور',saving:'جارٍ الحفظ...',noUser:'تعذر تحديد المستخدم',offline:'يجب الاتصال بالإنترنت لتغيير كلمة المرور',
+    needCur:'اكتب كلمة المرور الحالية',needNew:'اكتب كلمة المرور الجديدة',same:'كلمة المرور الجديدة لازم تختلف عن الحالية',
+    temp:'لا يمكن استخدام 00000',mismatch:'تأكيد كلمة المرور غير مطابق',wrongCur:'كلمة المرور الحالية غير صحيحة',
+    notFound:'المستخدم غير موجود',conflict:'حدث تعارض أثناء الحفظ، حاول مرة أخرى',fail:'تعذر تغيير كلمة المرور',done:'تم تغيير كلمة المرور بنجاح'
+  }:{
+    title:'Change Password',cur:'Current password',nw:'New password',cf:'Confirm new password',
+    save:'Save Password',saving:'Saving...',noUser:'Unable to determine the user',offline:'Internet connection is required to change the password',
+    needCur:'Enter the current password',needNew:'Enter the new password',same:'The new password must be different from the current one',
+    temp:'00000 cannot be used',mismatch:'Passwords do not match',wrongCur:'The current password is incorrect',
+    notFound:'User not found',conflict:'A save conflict occurred, please try again',fail:'Unable to change the password',done:'Password changed successfully'
+  };
+}
+function cpwSetError(m){const el=document.getElementById('cpwError');if(el)el.textContent=m||'';}
+function cpwApplyLanguage(){
+  const T=cpwText(),set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  const m=document.getElementById('changePasswordModal');if(m)m.dir=lang==='ar'?'rtl':'ltr';
+  set('cpwTitle',T.title);set('cpwCurrentLabel',T.cur);set('cpwNewLabel',T.nw);set('cpwConfirmLabel',T.cf);set('cpwBtn',T.save);
+}
+function openChangePassword(){
+  const m=document.getElementById('changePasswordModal');if(!m)return;
+  [['cpwCurrent','cpwCurrentEye'],['cpwNew','cpwNewEye'],['cpwConfirm','cpwConfirmEye']].forEach(([i,e])=>{
+    const el=document.getElementById(i);
+    if(el){if(el.type==='text')togglePasswordVisibility(i,e);el.value='';}
+  });
+  cpwSetError('');cpwApplyLanguage();
+  const b=document.getElementById('cpwBtn');if(b)b.disabled=false;
+  m.classList.add('open');
+}
+function closeChangePassword(){
+  try{document.getElementById('changePasswordModal').classList.remove('open');}catch(e){}
+  ['cpwCurrent','cpwNew','cpwConfirm'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+}
+async function submitChangePassword(){
+  const T=cpwText(),btn=document.getElementById('cpwBtn');
+  const cur=String(document.getElementById('cpwCurrent')?.value||'');
+  const nw=String(document.getElementById('cpwNew')?.value||'');
+  const cf=String(document.getElementById('cpwConfirm')?.value||'');
+  const username=String(currentAuthenticatedUser?.username||'').trim();
+  cpwSetError('');
+  if(!username){cpwSetError(T.noUser);return;}
+  if(!navigator.onLine){cpwSetError(T.offline);return;}
+  if(!cur){cpwSetError(T.needCur);return;}
+  if(!nw){cpwSetError(T.needNew);return;}
+  if(nw===cur){cpwSetError(T.same);return;}
+  if(nw==='00000'){cpwSetError(T.temp);return;}
+  { const weak=passwordWeakReason(nw,username); if(weak){cpwSetError(weak);return;} }
+  if(nw!==cf){cpwSetError(T.mismatch);return;}
+  if(btn){btn.disabled=true;btn.textContent=T.saving;}
+  try{
+    await updateUsersPasswordOnGitHub(username,nw,cur);
+    // Keep this device in step with the new password (same as the forced-change screen does).
+    try{
+      const raw=localStorage.getItem(USERS_LOCAL_PROFILE_KEY)||'';
+      if(raw){const pr=JSON.parse(raw);pr.passwordHash=await hashLoginPassword(nw);pr.localSavedAt=new Date().toISOString();localStorage.setItem(USERS_LOCAL_PROFILE_KEY,JSON.stringify(pr));}
+    }catch(e){}
+    // Refresh the offline users copy so the OLD password stops working offline on this device.
+    try{const fresh=await loadUsersCSVFromGitHubFresh();await saveEncryptedOfflineBackup('users',fresh);}catch(e){}
+    closeChangePassword();
+    try{playScanSuccessSound();}catch(e){}
+    try{toast(T.done);}catch(e){}
+  }catch(e){
+    const msg=String(e&&e.message||'');
+    if(msg==='WRONG_CURRENT')cpwSetError(T.wrongCur);
+    else if(msg==='OFFLINE')cpwSetError(T.offline);
+    else if(msg==='USER_NOT_FOUND')cpwSetError(T.notFound);
+    else if(msg==='CONFLICT')cpwSetError(T.conflict);
+    else cpwSetError(T.fail);
+  }finally{if(btn){btn.disabled=false;btn.textContent=T.save;}}
+}
+/* ==== V6-CHANGEPWD-END ==== */
 
 /* ==== PDF-START: report PDF export + local "report snapshots" (added in v5.5) ====
    jsPDF and html2canvas are bundled locally (jspdf.umd.min.js, html2canvas.min.js) next to index.html,
@@ -3918,20 +4048,6 @@ async function saveFileUploadSheetState(){
 function isAdminUser(){
   return String(currentAuthenticatedUser?.type||'').trim().toLowerCase()==='admin';
 }
-
-
-   let fileUploadUserNames={};
-async function ensureFileUploadUserNames(){
-  try{ const r=await fuLoadUserNames(); if(r&&r.map)fileUploadUserNames=r.map; }catch(e){}
-}
-function fuTransferUserLabel(code){
-  const c=String(code||'').trim();
-  if(!c)return '—';
-  const name=fileUploadUserNames[c.toLowerCase()];
-  return name?(c+' — '+name):c;
-}
-
-   
 async function loadFileUploadRows(){
   let text='';
   try{
@@ -3950,7 +4066,6 @@ async function loadFileUploadRows(){
     fileUploadRawTextCache='';
     fileUploadContentSHA='';
   }
-   if(!Object.keys(fileUploadUserNames).length)await ensureFileUploadUserNames();
   const allRows=parseFileUploadCSV(text);
   fileUploadRows=allRows;
   const myDept=String(currentAuthenticatedUser?.department||'').trim().toLowerCase();
@@ -4250,7 +4365,7 @@ function renderFileUploadView(){
     `<div style="font-weight:900;font-size:13px;color:var(--text);">${escapeHtml(sheetLabel)}</div>`+
     `<div style="margin-top:4px;color:var(--muted);">${escapeHtml(sheet.department||'')} · ${sheet.rows.length} ${lang==='ar'?'صنف':'items'}</div>`+
     (sheet.transferred
-            ? `<div style="margin-top:5px;color:var(--amber-fg);">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}:<br>${escapeHtml(fuTransferUserLabel(sheet.transferUser))} · ${escapeHtml(sheet.transferDate||'—')} ${escapeHtml(sheet.transferTime||'')}</div>`
+      ? `<div style="margin-top:5px;color:var(--amber-fg);">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}: ${escapeHtml(sheet.transferUser||'—')} · ${escapeHtml(sheet.transferDate||'—')} ${escapeHtml(sheet.transferTime||'')}</div>`
       : `<div style="margin-top:5px;color:var(--mint-fg);">${lang==='ar'?'متاح للنقل إلى الملف الخاص':'Available to transfer to Private File'}</div>`);
 
   const transferBtn=sheet.transferred
@@ -4436,7 +4551,7 @@ function renderFileUploadSheetsList(){
       ? `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:10.5px;color:var(--muted);text-align:center;min-width:112px;">🔒 ${lang==='ar'?'غير نشط':'Inactive'}</div>`
       : `<button onclick="event.stopPropagation();moveFileUploadSheetToPrivate('${key}')" title="Move to Private File" style="background:var(--mint);color:#082016;border:none;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer;">📥</button>`;
     const transferInfo=transferred
-            ? `<div style="font-size:10.5px;color:var(--amber-fg);margin-top:5px;line-height:1.5;">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}:<br>${escapeHtml(fuTransferUserLabel(s.transferUser))} · ${escapeHtml(s.transferDate||'—')} ${escapeHtml(s.transferTime||'')}</div>`
+      ? `<div style="font-size:10.5px;color:var(--amber-fg);margin-top:5px;line-height:1.5;">${lang==='ar'?'تم النقل بواسطة':'Transferred by'}: ${escapeHtml(s.transferUser||'—')} · ${escapeHtml(s.transferDate||'—')} ${escapeHtml(s.transferTime||'')}</div>`
       : `<div style="font-size:11px;color:var(--mint-fg);margin-top:4px;">${lang==='ar'?'متاح للنقل فقط':'Available for transfer only'}</div>`;
     return `<div class="file-sheet-card" data-sheet-no="${escapeHtml(String(s.sheetNo))}" onclick="openFileUploadSheet('${key}')" style="margin:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;${transferred?'opacity:.78;':''}">
       <div style="flex:1;min-width:0;">
@@ -8417,7 +8532,7 @@ async function usersGitHubPutFile(text,sha,message){
   if(!res.ok){const err=new Error(data.message||('GitHub users PUT HTTP '+res.status));err.status=res.status;throw err;}
   return data;
 }
-async function updateUsersPasswordOnGitHub(username,newPassword){
+async function updateUsersPasswordOnGitHub(username,newPassword,currentPassword){
   if(!navigator.onLine)throw new Error('OFFLINE');
   for(let attempt=0;attempt<3;attempt++){
     const latest=await usersGitHubGetFile();
@@ -8434,6 +8549,8 @@ async function updateUsersPasswordOnGitHub(username,newPassword){
       if(clean(matrix[i]?.[usernameIdx]).toLowerCase()===String(username||'').trim().toLowerCase()){rowIndex=i;break;}
     }
     if(rowIndex<0)throw new Error('USER_NOT_FOUND');
+    // v6.0.0: when called from My Profile the current password is verified against the live file first.
+    if(currentPassword!==undefined&&!(await verifyPasswordAgainst(matrix[rowIndex][passwordIdx],currentPassword)))throw new Error('WRONG_CURRENT');
     // A new password is always stored as a salted verifier, never as plain text.
     matrix[rowIndex][passwordIdx]=await makePasswordVerifier(newPassword);
     try{
