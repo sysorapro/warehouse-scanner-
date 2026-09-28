@@ -377,6 +377,14 @@ window.DATA_GITHUB_CONFIG = {
     background:var(--mint); color:#062018; margin-top:4px;
   }
   .login-btn:disabled{ opacity:.5; }
+  .login-action-row{display:flex;gap:10px;align-items:stretch;margin-top:4px;direction:ltr;}
+  .login-action-row .login-btn{flex:1;margin-top:0;}
+  .login-bio-btn{flex:0 0 52px;width:52px;border:1.5px solid var(--border);border-radius:13px;background:var(--surface-2);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .login-bio-btn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+  .login-bio-btn.ready{color:var(--mint-fg);border-color:var(--mint);}
+  .login-bio-btn:active{background:var(--border);}
+  .login-bio-btn:disabled{opacity:.5;}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
   .login-error{
     min-height:20px; margin:10px 0 0; text-align:center;
     color:var(--red); font-size:12px; font-weight:700; line-height:1.5;
@@ -548,7 +556,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -589,8 +597,13 @@ window.DATA_GITHUB_CONFIG = {
 
     <label class="login-remember" for="loginRemember"><input type="checkbox" id="loginRemember"><span id="loginRememberLabel">Remember login</span></label>
 
-    <button class="login-btn" id="loginBtn" type="button" onclick="performLogin(); return false;">Login</button>
-    <button class="login-btn" id="loginBiometricBtn" type="button" onclick="tryBiometricLogin(); return false;" style="display:none;margin-top:8px;background:var(--surface);color:var(--text);border:1px solid var(--border);">🔒 <span id="loginBiometricBtnLabel">Login with fingerprint</span></button>
+    <div class="login-action-row">
+      <button class="login-btn" id="loginBtn" type="button" onclick="performLogin(); return false;">Login</button>
+      <button class="login-bio-btn" id="loginBiometricBtn" type="button" onclick="tryBiometricLogin(); return false;" aria-label="Login with fingerprint" title="Login with fingerprint">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11c0 3.2-.4 5.6-1.6 8"/><path d="M8.5 20c1.4-2.3 2-4.9 2-8.6a1.6 1.6 0 0 1 3.2 0c0 2.6-.3 5.1-1.2 7.4"/><path d="M6 17.5c.6-1.6.9-3.4.9-6A5.1 5.1 0 0 1 12 6.4a5 5 0 0 1 4.6 3"/><path d="M4 14c.3-1 .5-2.1.5-3.4a7.5 7.5 0 0 1 12.7-5.4"/><path d="M16.8 12.5c.1 2.2-.2 4.4-1 6.3"/><path d="M19.5 10c.3 2.9 0 6-1.2 8.6"/></svg>
+        <span id="loginBiometricBtnLabel" class="sr-only">Login with fingerprint</span>
+      </button>
+    </div>
     <div class="login-error" id="loginError"></div>
     <div class="login-bottom-row">
       <button class="login-lang" id="loginLangBtn" type="button" onclick="toggleLoginLanguage()">AR</button>
@@ -598,7 +611,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v5.9 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -621,7 +634,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -818,7 +831,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.0 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v5.9 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -8504,7 +8517,7 @@ async function enableBiometricLogin(){
   const ar=diagIsAr();
   const u=currentAuthenticatedUser;
   if(!u||!u.username){toast(ar?'سجّل الدخول الأول':'Please sign in first','warning');return;}
-  if(!(await biometricSupported())){toast(ar?'الجهاز أو المتصفح ده مش بيدعم بصمة/Face ID':'This device or browser does not support biometric login','warning');return;}
+  if(!(await biometricSupported())){toast(ar?'الجهاز أو المتصفح ده مش بيدعم بصمة/Face ID (WebAuthn غير متاح)':'This device or browser does not support biometric login (WebAuthn unavailable)','warning');return;}
   const raw=localStorage.getItem(USERS_LOCAL_PROFILE_KEY);
   let profile=null;try{profile=raw?JSON.parse(raw):null;}catch(e){}
   if(!profile||String(profile.username||'').trim().toLowerCase()!==u.username.toLowerCase()||!profile.passwordHash){
@@ -8525,7 +8538,7 @@ async function enableBiometricLogin(){
     toast(ar?'✅ اتفعّلت البصمة على الجهاز ده':'✅ Biometric login enabled on this device','success');
     try{renderProfile();}catch(e){}
   }catch(e){
-    toast(ar?'تعذر تفعيل البصمة':'Could not enable biometric login','warning');
+    toast((ar?'تعذر تفعيل البصمة':'Could not enable biometric login')+' ['+((e&&e.name)||'error')+']','warning');
   }
 }
 function disableBiometricLogin(){
@@ -8538,33 +8551,59 @@ async function refreshBiometricLoginButton(){
     if(!btn)return;
     const uname=String(document.getElementById('loginUsername')?.value||'').trim();
     const cred=getBiometricCredFor(uname)||getBiometricCredFor(null);
-    const supported=cred?await biometricSupported():false;
-    btn.style.display=(supported&&cred)?'':'none';
+    // Always show the icon when the browser has WebAuthn, so the user can find it;
+    // it is highlighted once fingerprint login has been enabled on this device.
+    btn.style.display='';
+    btn.classList.toggle('ready',!!cred);
   }catch(e){}
 }
 async function tryBiometricLogin(){
   const ar=diagIsAr();
+  setLoginError('');
+  if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){
+    setLoginError(ar?'البصمة مش مدعومة في المتصفح ده (لازم رابط HTTPS)':'Biometric login is not supported here (HTTPS is required)');return;
+  }
   const uname=String(document.getElementById('loginUsername')?.value||'').trim();
   const cred=getBiometricCredFor(uname)||getBiometricCredFor(null);
-  if(!cred){setLoginError(ar?'مفيش بصمة مفعّلة على الجهاز ده لسه':'No biometric login set up on this device yet');return;}
+  if(!cred){setLoginError(ar?'البصمة لسه مش مفعّلة. سجّل دخول بكلمة المرور ثم فعّلها من الملف الشخصي':'Fingerprint is not enabled yet. Sign in with your password, then enable it from My Profile');return;}
   const raw=localStorage.getItem(USERS_LOCAL_PROFILE_KEY);
   let profile=null;try{profile=raw?JSON.parse(raw):null;}catch(e){}
   if(!profile||String(profile.username||'').trim().toLowerCase()!==cred.username.trim().toLowerCase()||!profile.passwordHash||String(profile.status||'').trim().toLowerCase()!=='active'){
     setLoginError(ar?'محتاج تسجّل دخول بكلمة المرور مرة كمان الأول':'Please sign in with your password once first');return;
   }
+  const btn=document.getElementById('loginBiometricBtn');
   try{
+    if(btn)btn.disabled=true;
     const assertion=await navigator.credentials.get({publicKey:{
       challenge:randomChallenge(),
-      allowCredentials:[{id:bufferFromB64url(cred.id),type:'public-key'}],
+      allowCredentials:[{id:bufferFromB64url(cred.id),type:'public-key',transports:['internal']}],
       userVerification:'required',
       timeout:60000
     }});
     if(!assertion)throw new Error('cancelled');
-    applyRestoredUserToApp(profile);
+    const appUser={username:profile.username,employeeName:profile.employeeName,department:profile.department,jobTitle:profile.jobTitle,type:profile.type,status:profile.status};
+    applyRestoredUserToApp(appUser);
+    try{sessionStorage.setItem(USERS_SESSION_KEY,JSON.stringify(appUser));}catch(e){}
+    // Re-check the account against the live users file when online (inactive users must be blocked).
+    if(navigator.onLine&&usersGitHubConfigured()){
+      const st=await verifyCurrentUserStatusFromServer();
+      if(st&&!st.active){
+        try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
+        try{localStorage.removeItem(USERS_LOCAL_PROFILE_KEY);}catch(e){}
+        try{localStorage.removeItem(BIOMETRIC_CRED_KEY);}catch(e){}
+        currentAuthenticatedUser=null;
+        playErrorSound();showInactiveLoginMessage();refreshBiometricLoginButton();return;
+      }
+    }
+    let isTemp=false;
+    try{isTemp=await verifyPasswordAgainst(profile.passwordHash,'00000');}catch(e){}
+    if(isTemp){showPasswordChangeGate(currentAuthenticatedUser);return;}
+    setResponsibleFromLoggedInUser();
+    playScanSuccessSound();hideLoginGate();
   }catch(e){
-    if(e&&e.name==='NotAllowedError')return; // cancelled or failed verification — no need to show an error
-    setLoginError(ar?'تعذر التحقق بالبصمة':'Biometric verification failed');
-  }
+    if(e&&e.name==='NotAllowedError'){setLoginError(ar?'تم إلغاء التحقق بالبصمة':'Fingerprint verification was cancelled');return;}
+    setLoginError((ar?'تعذر التحقق بالبصمة':'Biometric verification failed')+' ['+((e&&e.name)||'error')+']');
+  }finally{if(btn)btn.disabled=false;}
 }
 // ================= Change password from My Profile (signed-in users) =================
 // Same rules and same storage as the first-login screen (a new password is always saved as a salted
@@ -9177,8 +9216,11 @@ async function tryOfflineLogin(username,password){
 function logoutUser(){
   try{sessionStorage.removeItem(USERS_SESSION_KEY);}catch(e){}
   try{localStorage.removeItem(USERS_REMEMBER_KEY);}catch(e){}
-  try{localStorage.removeItem(USERS_LOCAL_PROFILE_KEY);}catch(e){}
-  try{localStorage.removeItem(BIOMETRIC_CRED_KEY);}catch(e){}
+  // Keep the local profile + fingerprint registration when fingerprint login is enabled,
+  // otherwise the fingerprint button would stop working after every logout.
+  if(!getBiometricCredFor(null)){
+    try{localStorage.removeItem(USERS_LOCAL_PROFILE_KEY);}catch(e){}
+  }
   try{document.body.classList.remove('authenticated');}catch(e){}
   currentAuthenticatedUser=null;
   try{updatePublicFilesBadge();}catch(e){}
