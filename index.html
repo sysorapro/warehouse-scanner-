@@ -2169,12 +2169,13 @@ async function renderProfile(){
     box.appendChild(hint);
     const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;';
     const mk=(txt,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=txt;b.className='no-sound';b.style.cssText='flex:1;min-width:120px;padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:Tajawal,sans-serif;font-size:13px;';b.onclick=fn;return b;};
-    const send=mk((ar?'📤 إرسال للدعم':'📤 Send to support'),openSupportForm);
+     const cpb=mk(ar?'🔑 تغيير كلمة المرور':'🔑 Change password',openChangePassword);
+     const send=mk((ar?'📤 إرسال للدعم':'📤 Send to support'),openSupportForm);
     send.style.background='var(--amber)';send.style.color='#1a1204';send.style.border='none';send.style.fontWeight='800';
     bar.appendChild(send);
     bar.appendChild(mk(ar?'📋 نسخ':'📋 Copy',diagCopyReport));
     bar.appendChild(mk(ar?'🩺 حالة التطبيق والاتصال':'🩺 App & connection status',openDiagnostics));
-    const cpb=mk(ar?'🔑 تغيير كلمة المرور':'🔑 Change password',openChangePassword);
+   
     cpb.style.flexBasis='100%';bar.appendChild(cpb);
     box.appendChild(bar);
   }catch(e){}
