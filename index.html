@@ -9446,5 +9446,222 @@ if ('serviceWorker' in navigator){
   });
 }
 </script>
+<script id="fuPdfFiltersPatch">
+/* ==== FU-PDF-FILTERS-PATCH-START ====
+   Additive patch (does not edit the original code above):
+   1) "Last update attempt" (App & Connection Status) now also shows the FileUploade check result.
+   2) Public Files report + File details: filter field + search, and PDF export in landscape (A4 wide).
+   Exports (PDF / Excel) follow whatever filter is currently applied on screen. */
+(function(){
+  'use strict';
+
+  /* ---------- 1) Last update attempt: FileUploade ---------- */
+  const FU_LAST_CHECK_KEY='warehouseScannerLastFileUploadCheck';
+  function fuRecordCheck(ok){
+    try{localStorage.setItem(FU_LAST_CHECK_KEY,JSON.stringify({at:Date.now(),ok:!!ok}));}catch(e){}
+  }
+  if(typeof refreshPublicFilesCount==='function'){
+    const origRefresh=refreshPublicFilesCount;
+    refreshPublicFilesCount=function(){
+      const p=origRefresh.apply(this,arguments);
+      try{
+        Promise.resolve(p).then(n=>{
+          if(n!==null&&n!==undefined)fuRecordCheck(true);
+          else if(navigator.onLine!==false&&typeof currentAuthenticatedUser!=='undefined'&&currentAuthenticatedUser)fuRecordCheck(false);
+        }).catch(()=>{});
+      }catch(e){}
+      return p;
+    };
+  }
+  if(typeof diagBuildRows==='function'){
+    const origRows=diagBuildRows;
+    diagBuildRows=async function(){
+      const rows=await origRows.apply(this,arguments);
+      try{
+        const ar=diagIsAr();
+        const label=ar?'آخر محاولة تحديث':'Last update attempt';
+        const row=rows.find(r=>r&&r.label===label);
+        let rec=null;try{rec=JSON.parse(localStorage.getItem(FU_LAST_CHECK_KEY)||'null');}catch(e){}
+        if(row&&(rec||String(row.value).indexOf('\n')>=0)){
+          row.value=String(row.value)+' · FileUploade '+(rec?(rec.ok?'✓':'✕'):'—');
+          if(rec&&!rec.ok)row.warn=true;
+        }
+      }catch(e){}
+      return rows;
+    };
+  }
+
+  /* ---------- 2) Filters ---------- */
+  // [key, label, column index in the cells array]
+  const RPT_FILTERS=[['all','All',-1],['dept','Department',0],['sheetno','SheetNo.',1],['action','ActionType',3],['person','PersonalName',5],['deletion','Deletion',9],['source','Source',11]];
+  const DET_FILTERS=[['all','All',-1],['itemcode','Item Code',0],['action','ActionType',2],['person','PersonalName',3],['scanned','Scanned',8],['deletion','Deletion',9],['source','Source',11]];
+
+  const $=id=>document.getElementById(id);
+  function lower(v){return String(v==null?'':v).trim().toLowerCase();}
+  function currentFilter(list,selId,inputId){
+    const sel=$(selId),inp=$(inputId);
+    const key=sel?sel.value:'all';
+    const def=list.find(x=>x[0]===key)||list[0];
+    return{label:def[1],idx:def[2],q:lower(inp?inp.value:'')};
+  }
+  function cellMatches(cells,f){
+    if(!f.q)return true;
+    if(f.idx<0)return cells.some(c=>lower(c).indexOf(f.q)>=0);
+    return lower(cells[f.idx]).indexOf(f.q)>=0;
+  }
+  function filterNote(f){
+    if(!f.q)return '';
+    const ar=diagIsAr();
+    return ' · '+(ar?'فلتر: ':'Filter: ')+f.label+' = "'+f.q+'"';
+  }
+  const rptFilter=()=>currentFilter(RPT_FILTERS,'fuRptFilterField','fuReportSearch');
+  const detFilter=()=>currentFilter(DET_FILTERS,'fuDetFilterField','fuDetSearch');
+
+  // same cell layout as FU_REPORT_COLUMNS
+  function reportCells(r){
+    const ar=diagIsAr();
+    const del=v=>v==='OK'?'OK':(v==='PARTIAL'?(ar?'جزئي':'Partial'):'');
+    const src=v=>v==='archived'?(ar?'أرشيف':'Archived'):(ar?'حالي':'Current');
+    return [r.department,r.sheetNo,r.sheetName,r.actionType,r.uploadDate,r.personalName,r.employeeName,r.transDate,r.transTime,del(r.deletion),r.deletionDate,src(r.source)];
+  }
+
+  // Report: on-screen table + Excel + PDF all go through these two.
+  if(typeof renderFileUploadReportTable==='function'){
+    const origRender=renderFileUploadReportTable;
+    renderFileUploadReportTable=function(){
+      const f=rptFilter();
+      if(f.idx<0||!f.q||typeof fuReport==='undefined'||fuReport.state!=='ready'||!Array.isArray(fuReport.rows))return origRender.apply(this,arguments);
+      const saved=fuReport.rows;
+      try{
+        fuReport.rows=saved.filter(r=>cellMatches(reportCells(r),f));
+        return origRender.apply(this,arguments);
+      }finally{fuReport.rows=saved;}
+    };
+  }
+  if(typeof getFileUploadReportShownRows==='function'){
+    const origShown=getFileUploadReportShownRows;
+    getFileUploadReportShownRows=function(){
+      const base=origShown.apply(this,arguments);
+      const f=rptFilter();
+      if(f.idx<0||!f.q)return base;
+      return base.filter(x=>cellMatches(x.cells,f));
+    };
+  }
+  if(typeof openFileUploadReport==='function'){
+    const origOpen=openFileUploadReport;
+    openFileUploadReport=function(){
+      const s=$('fuRptFilterField');if(s)s.value='all';
+      return origOpen.apply(this,arguments);
+    };
+  }
+
+  // File details: filtering happens where the items are fetched, so table, count, PDF and Excel all agree.
+  if(typeof fuDetailItemsFor==='function'){
+    const origItems=fuDetailItemsFor;
+    fuDetailItemsFor=function(sheetNo){
+      const items=origItems.apply(this,arguments);
+      const f=detFilter();
+      if(!f.q)return items;
+      return items.filter(it=>cellMatches(fuDetailCells([it])[0],f));
+    };
+  }
+  if(typeof openFileUploadSheetDetail==='function'){
+    const origOpenDet=openFileUploadSheetDetail;
+    openFileUploadSheetDetail=function(){
+      const s=$('fuDetFilterField'),i=$('fuDetSearch');
+      if(s)s.value='all';
+      if(i){i.value='';i.placeholder=diagIsAr()?'بحث في الأصناف...':'Search items...';}
+      return origOpenDet.apply(this,arguments);
+    };
+  }
+
+  function makeSelect(id,list,onchange){
+    const sel=document.createElement('select');
+    sel.id=id;sel.style.cssText='width:38%;max-width:170px;flex:none;';
+    list.forEach(x=>{const o=document.createElement('option');o.value=x[0];o.textContent=x[1];sel.appendChild(o);});
+    sel.onchange=onchange;
+    return sel;
+  }
+  function injectFilterUi(){
+    const rptInput=$('fuReportSearch');
+    if(rptInput&&!$('fuRptFilterField')){
+      rptInput.parentNode.insertBefore(makeSelect('fuRptFilterField',RPT_FILTERS,()=>renderFileUploadReportTable()),rptInput);
+    }
+    const detBody=$('fuDetailBody');
+    if(detBody&&!$('fuDetFilterField')){
+      const row=document.createElement('div');
+      row.style.cssText='padding:8px 14px 0;display:flex;gap:8px;';
+      const sel=makeSelect('fuDetFilterField',DET_FILTERS,()=>renderFileUploadSheetDetail());
+      const inp=document.createElement('input');
+      inp.type='text';inp.id='fuDetSearch';inp.autocomplete='off';inp.style.cssText='flex:1;';
+      inp.placeholder=diagIsAr()?'بحث في الأصناف...':'Search items...';
+      inp.oninput=()=>renderFileUploadSheetDetail();
+      row.appendChild(sel);row.appendChild(inp);
+      detBody.parentNode.insertBefore(row,detBody);
+    }
+  }
+  injectFilterUi();
+
+  /* ---------- 3) Landscape PDF (A4 wide, 20 rows per page, table header repeated) ---------- */
+  const PDF_PAGE_WIDTH_PX=1120, ROWS_PER_PAGE=20;
+  function tableHtml(cols,rows,ar){
+    const th=cols.map(h=>'<th style="border:1px solid #ccc;padding:5px 6px;background:#f2f2f2;font-size:10.5px;text-align:'+(ar?'right':'left')+';white-space:nowrap;">'+escapeHtml(h)+'</th>').join('');
+    const tr=rows.map((row,i)=>'<tr'+(i%2?' style="background:#fafafa;"':'')+'>'+row.map(c=>'<td style="border:1px solid #ddd;padding:5px 6px;font-size:10.5px;vertical-align:top;word-break:break-word;">'+escapeHtml(String(c==null?'':c))+'</td>').join('')+'</tr>').join('');
+    return '<table style="width:100%;border-collapse:collapse;direction:ltr;"><thead><tr>'+th+'</tr></thead><tbody>'+tr+'</tbody></table>';
+  }
+  async function exportLandscapePdf(kind,title,scope,cols,rows,fileBase){
+    const ar=diagIsAr();
+    if(!pdfLibsReady()){
+      toast(ar?'ملفات إنشاء PDF لم تُحمّل بعد — افتح التطبيق وأنت متصل بالإنترنت مرة واحدة ثم أعد المحاولة':'The PDF files have not downloaded yet — open the app online once, then try again','warning');
+      return false;
+    }
+    const pages=[];
+    for(let i=0;i<rows.length;i+=ROWS_PER_PAGE)pages.push(rows.slice(i,i+ROWS_PER_PAGE));
+    let wrap=null;
+    try{
+      const pdf=new window.jspdf.jsPDF({unit:'pt',format:'a4',orientation:'landscape'});
+      const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight(),margin=20;
+      if(pages.length>2)toast(ar?'جاري إنشاء PDF...':'Creating PDF...');
+      for(let p=0;p<pages.length;p++){
+        wrap=buildPdfPage(title,scope+(pages.length>1?' · '+(p+1)+'/'+pages.length:''),tableHtml(cols,pages[p],ar));
+        wrap.style.width=PDF_PAGE_WIDTH_PX+'px';
+        const canvas=await html2canvas(wrap,{scale:2,backgroundColor:'#ffffff',useCORS:false});
+        if(wrap.parentNode)wrap.parentNode.removeChild(wrap);wrap=null;
+        let w=pageW-margin*2,h=canvas.height*w/canvas.width;
+        const maxH=pageH-margin*2-10;
+        if(h>maxH){h=maxH;w=canvas.width*h/canvas.height;}
+        if(p>0)pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',margin,margin,w,h);
+        pdf.setFontSize(8);pdf.setTextColor(120);
+        pdf.text((p+1)+' / '+pages.length,pageW-margin,pageH-8,{align:'right'});
+      }
+      return await shareOrDownloadAndSave(kind,title,pdf.output('blob'),fileBase,'pdf','application/pdf');
+    }catch(err){
+      toast((ar?'تعذر إنشاء PDF: ':'Could not create the PDF: ')+(err&&err.message?err.message:String(err)),'error');
+      return false;
+    }finally{
+      if(wrap&&wrap.parentNode)wrap.parentNode.removeChild(wrap);
+    }
+  }
+
+  exportFileUploadReportPdf=async function(){
+    const ar=diagIsAr();
+    if(fuReport.state!=='ready'){toast(ar?'حمّل التقرير أولًا':'Load the report first','warning');return false;}
+    const shown=getFileUploadReportShownRows();
+    if(!shown.length){toast(ar?'لا توجد بيانات للتصدير':'No data to export','warning');return false;}
+    const title=ar?'تقرير الملفات العامة (FileUploade)':'Public Files report (FileUploade)';
+    const scope=fuReport.scopeNote+' · '+reportRangeLabel(getSelectedFuReportRange())+' · '+shown.length+(ar?' سطر':' row(s)')+filterNote(rptFilter());
+    return exportLandscapePdf('fileupload',title,scope,FU_REPORT_COLUMNS,shown.map(x=>x.cells),'fileupload-report');
+  };
+  exportFileUploadSheetDetailPdf=async function(){
+    const ar=diagIsAr(),items=fuDetailItemsFor(fuDetailSheetNo),summary=fuSheetSummaryRow(fuDetailSheetNo);
+    if(!summary||!items.length){toast(ar?'لا توجد بيانات للتصدير':'No data to export','warning');return false;}
+    const title=(ar?'تفاصيل الملف ':'Sheet details ')+summary.sheetNo;
+    const scope=(summary.department||'')+' · '+items.length+(ar?' صنف':' item(s)')+filterNote(detFilter());
+    return exportLandscapePdf('fu-sheet',title,scope,FU_DETAIL_COLUMNS,fuDetailCells(items),'sheet-'+summary.sheetNo.replace(/[^A-Za-z0-9_-]+/g,''));
+  };
+})();
+/* ==== FU-PDF-FILTERS-PATCH-END ==== */
+</script>
 </body>
 </html>
