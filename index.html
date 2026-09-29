@@ -9603,7 +9603,7 @@ if ('serviceWorker' in navigator){
   injectFilterUi();
 
   /* ---------- 3) Landscape PDF (A4 wide, 20 rows per page, table header repeated) ---------- */
-  const PDF_PAGE_WIDTH_PX=1120, ROWS_PER_PAGE=20;
+  const PDF_PAGE_WIDTH_PX=1120, ROWS_PER_PAGE=25;
   function tableHtml(cols,rows,ar){
     const th=cols.map(h=>'<th style="border:1px solid #ccc;padding:5px 6px;background:#f2f2f2;font-size:10.5px;text-align:'+(ar?'right':'left')+';white-space:nowrap;">'+escapeHtml(h)+'</th>').join('');
     const tr=rows.map((row,i)=>'<tr'+(i%2?' style="background:#fafafa;"':'')+'>'+row.map(c=>'<td style="border:1px solid #ddd;padding:5px 6px;font-size:10.5px;vertical-align:top;word-break:break-word;">'+escapeHtml(String(c==null?'':c))+'</td>').join('')+'</tr>').join('');
