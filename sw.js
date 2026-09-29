@@ -1,13 +1,14 @@
-// v5: bumping this name makes the activate step below delete the old v4 cache.
-// Also now caches the two PDF-export libraries so "Export PDF" works fully offline
-// once the app has been opened online at least once after this update.
-const CACHE_NAME = 'warehouse-scanner-v5';
+// Bumping this name makes the activate step below delete the previous cache and
+// pick up any change to CORE_ASSETS below (e.g. v6 adds the maskable icon so it is
+// available offline too, not just fetched on demand the first time it's needed).
+const CACHE_NAME = 'warehouse-scanner-v6';
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './icon-512-maskable.png',
   './html5-qrcode.min.js',
   './xlsx.full.min.js',
   './jspdf.umd.min.js',
