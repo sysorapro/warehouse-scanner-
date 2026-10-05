@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.6.3 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.6.3 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.6.3 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -748,8 +748,8 @@ window.DATA_GITHUB_CONFIG = {
         <label data-i18n="actionTypeLabel">نوع الإجراء</label>
         <select id="actionType" onchange="onActionTypeChange()">
           <option value="" data-i18n="actionTypePlaceholder">-- اختر نوع الإجراء --</option>
-          <option value="New" data-i18n="actionTypeNewOpt">جديد</option>
-          <option value="Edit" data-i18n="actionTypeEditOpt">تعديل</option>
+          <option value="new" data-i18n="actionTypeNewOpt">جديد</option>
+          <option value="edit" data-i18n="actionTypeEditOpt">تعديل</option>
         </select>
       </div>
       <div class="field">
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.6.3 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1270,8 +1270,8 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.5 Pro';
-const APP_VERSION_DATE='2026-10-04';
+const APP_VERSION='v6.6.3';
+const APP_VERSION_DATE='2026-10-05';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
 let diagRateMem=null, diagRateSavedAt=0, diagStoragePersisted=null, diagLastSaveToastAt=0, diagLastRows=[];
@@ -2659,7 +2659,7 @@ function adSetMode(m){
 }
 function adParseFu(txt,src,nm){
   if(!String(txt||'').trim())return[];
-  return parseFileUploadCSV(txt).map(r=>({src,department:r.department,docNo:r.sheetNo,docName:r.sheetName,actionType:r.actionType,shelf:r.shelfCode,
+  return parseFileUploadCSV(txt).map(r=>({src,department:r.department,docNo:r.sheetNo,docName:r.sheetName,actionType:fmtActionType(r.actionType),shelf:r.shelfCode,
     itemCode:r.itemCode,itemName:r.itemName,empNo:r.personalName,empName:nm(r.personalName),uploadDate:r.uploadDate,date:r.transDate,time:r.transTime,
     scanned:String(r.scannedFlag||'').trim().toUpperCase()==='OK'?'OK':'',scanDate:fuJoinDT(r.scanDate,r.scanTime),transDT:fuJoinDT(r.transDate,r.transTime),
     deletion:String(r.deletion||'').trim().toUpperCase()==='OK'?'OK':'',deletionDate:r.deletionDate}));
@@ -2671,7 +2671,7 @@ function adParseLog(text,src){
   const g=(r,...ns)=>{for(const n of ns){const i=idx[norm(n)];if(i!==undefined)return String(r[i]??'').trim();}return'';};
   return m.slice(1).map(r=>{
     const sp=g(r,'Scan.Date').split(/\s+/);
-    return{src,department:g(r,'Department'),docNo:g(r,'SheetNo','PoNo'),docName:g(r,'SheetName'),actionType:g(r,'ActionType'),shelf:g(r,'ShelfNo'),
+    return{src,department:g(r,'Department'),docNo:g(r,'SheetNo','PoNo'),docName:g(r,'SheetName'),actionType:fmtActionType(g(r,'ActionType')),shelf:g(r,'ShelfNo'),
       itemCode:g(r,'Item Code'),itemName:g(r,'Item Name'),empNo:g(r,'Emp.No'),empName:g(r,'Emp.Name'),uploadDate:'',date:sp[0]||'',time:sp[1]||'',
       scanned:'OK',scanDate:g(r,'Scan.Date'),transDT:'',deletion:'',deletionDate:''};
   }).filter(r=>r.docNo||r.itemCode);
@@ -5004,6 +5004,15 @@ async function refreshFileUploadSheetLockIndicators(){
   }));
 }
 
+// Action type as it is WRITTEN or EXPORTED: always "New" / "Edit" (never "new" / "edit").
+// The value kept inside the app (select box, drafts, saved orders) stays 'new' / 'edit' because the screens compare against it,
+// so this is applied only where a value leaves the app: files, exports, shares and report columns.
+function fmtActionType(v){
+  const raw=String(v??'').trim(),n=raw.toLowerCase();
+  if(n==='new'||n==='جديد')return 'New';
+  if(n==='edit'||n==='تعديل')return 'Edit';
+  return raw;
+}
 function getActionTypeSummary(rows){
   const counts=new Map();
   (rows||[]).forEach(r=>{
@@ -5219,7 +5228,7 @@ function renderFileUploadSheet(){
 function buildFileUploadAOA(){
   const header=[...FILE_UPLOAD_FINAL_HEADERS];
   // Same order as FILE_UPLOAD_FINAL_HEADERS.
-  const rows=fileUploadList.map(r=>[r.department||'',r.sheetNo||'',r.sheetName||'',r.actionType||'',r.itemCode||'',r.itemName||'',r.uploadDate||'',r.personalName||r.userName||'',r.status||'',
+  const rows=fileUploadList.map(r=>[r.department||'',r.sheetNo||'',r.sheetName||'',fmtActionType(r.actionType),r.itemCode||'',r.itemName||'',r.uploadDate||'',r.personalName||r.userName||'',r.status||'',
     [r.transDate,r.transTime].filter(Boolean).join(' '),r.scanned?'OK':'',r.scanned?String(r.shelf||r.shelfCode||r.scannedValue||''):'',r.scanned?[r.scanDate,r.scanTime].filter(Boolean).join(' '):'',r.deletion||'',r.deletionDate||'']);
   return [header,...rows];
 }
@@ -5569,7 +5578,7 @@ function renderShelfLinkList(){
         <div style="flex:1;min-width:0;">
           <div style="font-weight:800;font-family:'Cairo';font-size:13.5px;color:var(--text);">${escapeHtml(r.itemCode)}</div>
           <div style="font-size:12px;color:var(--muted);margin:2px 0;">${escapeHtml(r.itemName)}</div>
-          ${r.actionType?`<div style="font-size:11px;color:var(--amber-fg);">Action Type: ${escapeHtml(r.actionType)}</div>`:''}
+          ${r.actionType?`<div style="font-size:11px;color:var(--amber-fg);">Action Type: ${escapeHtml(fmtActionType(r.actionType))}</div>`:''}
           <div style="font-size:11.5px;margin-top:3px;">${statusHtml}</div>
         </div>
       </div>
@@ -5583,7 +5592,7 @@ function renderShelfLinkList(){
 function buildShelfLinkAOA(){
   const sheet=getShelfLinkSheet(currentShelfLinkSheetId), rows=getShelfLinkActionRows();
   const header=['SheetNo.','Shelf Code','Group No','Group Name','Item Code','Item Name','Person Name','Date','Time','Action Type','WhN','Typ','BT','Stock Indicator','Stock Removal','Stock Placement','Sto.Location','Sec'];
-  return [header,...rows.map(r=>[sheet?.sheetNo||'',r.shelf||'',r.groupNo||'',r.groupName||'',r.itemCode||'',r.itemName||'',r.personName||'',r.scanDate||'',r.scanTime||'',r.actionType||'',r.whn||'',r.typ||'',r.bt||'',r.stockIndicator||'',r.stockRemoval||'',r.stockPlacement||'',r.stoLocation||'',r.sec||''])];
+  return [header,...rows.map(r=>[sheet?.sheetNo||'',r.shelf||'',r.groupNo||'',r.groupName||'',r.itemCode||'',r.itemName||'',r.personName||'',r.scanDate||'',r.scanTime||'',fmtActionType(r.actionType),r.whn||'',r.typ||'',r.bt||'',r.stockIndicator||'',r.stockRemoval||'',r.stockPlacement||'',r.stoLocation||'',r.sec||''])];
 }
 function buildShelfLinkXLSXBlob(){
   const aoa = buildShelfLinkAOA();
@@ -5658,7 +5667,7 @@ function logShelfLinkSheetToPrivateFile(sheet){
       // A sheet transferred from a Public File carries its ActionType per item (r.actionType),
       // not on the sheet itself — a device-created sheet is the reverse, so the row's own value
       // (when present) wins and the sheet-level one (from the New/Edit dialog) is the fallback.
-      String(u.department||''), (sheet&&sheet.sheetNo)||'', (sheet&&sheet.name)||'', (r.actionType||(sheet&&sheet.actionType))||'',
+      String(u.department||''), (sheet&&sheet.sheetNo)||'', (sheet&&sheet.name)||'', fmtActionType((r.actionType||(sheet&&sheet.actionType))||''),
       r.shelf||'', r.itemCode||'', r.itemName||'', String(u.username||''), String(u.employeeName||''),
       (r.scanDate||'')+' '+(r.scanTime||'')
     ]);
@@ -7846,7 +7855,7 @@ function logCurrentOrderToPoOrders(){
     if(!entries.length)return;
     const u=currentAuthenticatedUser||{};
     const rows=entries.map(e=>[
-      String(u.department||''), e.actionType||'', e.orderNo||'', e.shelf||'', e.item||'', e.itemName||'',
+      String(u.department||''), fmtActionType(e.actionType), e.orderNo||'', e.shelf||'', e.item||'', e.itemName||'',
       String(u.username||''), String(u.employeeName||''), (e.date||'')+' '+(e.time||'')
     ]);
     appendRowsToPoOrdersCsv(rows);
