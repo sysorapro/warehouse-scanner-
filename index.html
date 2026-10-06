@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.7.0 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.7.0 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.7.0 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.5 Pro © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.7.0 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1270,8 +1270,8 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.5 Pro';
-const APP_VERSION_DATE='2026-10-05';
+const APP_VERSION='v6.7.0';
+const APP_VERSION_DATE='2026-10-06';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
 let diagRateMem=null, diagRateSavedAt=0, diagStoragePersisted=null, diagLastSaveToastAt=0, diagLastRows=[];
@@ -10193,6 +10193,118 @@ if ('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(()=>{ /* offline caching is a bonus, not required */ });
   });
 }
+</script>
+<script>
+/* ===== Android back button (APK) — v6.6.6 =====
+   Additive module: it only CALLS the app's own close/back functions (exactly what tapping the on-screen ‹ / ✕ does);
+   nothing in the app is replaced or edited. One back press = one step back along the path the user took, newest first:
+     1. blocking screens (forced update, forced password change, first-run setup)  -> nothing is closed behind them; counts as "nothing to close" (step 6), so the user is never trapped
+     2. an open question box (confirm / choice / select / action type)           -> cancels it
+     3. the ⋮ menu                                                               -> closes it
+     4. the screen opened LAST (camera, saved orders, a report, its details...)  -> closes it / steps one level back, which uncovers the screen it was opened from
+     5. e.g. menu -> Reports -> PO & Private report -> details:  back x4  =  details -> report -> Reports -> home
+     6. nothing left to close (home or login screen)                             -> toast "press back again to exit"; the next press exits.
+   HOW THE PHONE'S BACK BUTTON REACHES THE PAGE (history mode, plain WebView / TWA):
+     Mobile browsers ignore ("skip") history entries that a page adds WITHOUT a real tap, and an entry added from inside the
+     back handler itself is exactly that. So nothing is ever added while handling a back press. Instead a stack of ~24 spare
+     entries is built from real taps / key presses (touchend, click, keydown) and every back press simply uses one up; they are
+     topped up again by the next tap. Cordova / Capacitor wrappers deliver the button as an event instead and need none of this. */
+(function(){
+  'use strict';
+  var EXIT_WINDOW=2000, armedAt=0, lastAt=0;
+  // modal id -> the app's own function that closes it / steps back from it
+  var CLOSERS={cameraModal:'stopScan',savedOrdersModal:'closeSavedOrders',shelfLinkSheetsModal:'closeShelfLinkSheets',shelfLinkModal:'backToShelfLinkSheets',
+    fileUploadSheetsModal:'closeFileUploadSheets',fileUploadViewModal:'closeFileUploadView',syncDataModal:'closeSyncDataModal',reportsModal:'reportsBack',
+    allFilesReportModal:'closeAllFilesReport',allFilesDetailModal:'closeAllFilesDetail',backupModal:'closeBackupScreen',profileModal:'closeProfile',
+    diagModal:'closeDiagnostics',waNotifyModal:'closeWaNotify',fuIntegrityModal:'closeFileUploadIntegrityCheck',supportFormModal:'closeSupportForm',
+    changePasswordModal:'closeChangePassword'};
+
+  function byId(i){return document.getElementById(i);}
+  function shown(el){if(!el)return false;if(el.classList.contains('hidden'))return false;var d=el.style&&el.style.display;if(d==='none')return false;
+    try{return window.getComputedStyle(el).display!=='none';}catch(e){return true;}}
+  function isAr(){try{return typeof diagIsAr==='function'?!!diagIsAr():document.documentElement.lang==='ar';}catch(e){return false;}}
+  function say(m){try{if(typeof toast==='function'){toast(m);return;}}catch(e){}}
+
+  /* The screens are tracked in the order they were OPENED (not by stacking), so "back" always retraces the user's own path. */
+  var openOrder=[];
+  function track(el){
+    if(!el||!el.id)return;var on=el.classList.contains('open'),i=openOrder.indexOf(el.id);
+    if(on&&i<0)openOrder.push(el.id);else if(!on&&i>=0)openOrder.splice(i,1);
+  }
+  try{
+    var mo=new MutationObserver(function(list){list.forEach(function(r){track(r.target);});});
+    [].forEach.call(document.querySelectorAll('.modal'),function(el){track(el);mo.observe(el,{attributes:true,attributeFilter:['class']});});
+  }catch(e){}
+  function topModal(){
+    for(var i=openOrder.length-1;i>=0;i--){var el=byId(openOrder[i]);if(el&&el.classList.contains('open'))return el;}
+    // fallback (observer unavailable): highest z-index, later in the page wins a tie
+    var list=[].slice.call(document.querySelectorAll('.modal.open')),best=null,bz=-1e9;
+    list.forEach(function(el){var z=parseInt(window.getComputedStyle(el).zIndex,10);if(isNaN(z))z=0;if(z>=bz){bz=z;best=el;}});
+    return best;
+  }
+  // the app's own question boxes: id of the dimmed background -> id of its Cancel button
+  var QUESTION_BOXES=[['customDialogBg','customDialogCancel'],['choiceDialogBg','choiceDialogCancel'],['selectDialogBg','selectDialogCancel']];
+  /* true when this back press was used up by closing / blocking something */
+  function closeOne(){
+    if(shown(byId('forceUpdateOverlay'))||shown(byId('passwordChangeGate'))||shown(byId('firstRunGate')))return false; // not closable: fall through to the "press again to exit" step
+    for(var q=0;q<QUESTION_BOXES.length;q++){
+      var bg=byId(QUESTION_BOXES[q][0]),cancel=byId(QUESTION_BOXES[q][1]);
+      if(bg&&bg.classList.contains('open')){if(cancel)cancel.click();else bg.click();return true;} // "Cancel" = the same as answering No
+    }
+    var dlg=[].slice.call(document.body.children).filter(function(el){return el.style&&el.style.position==='fixed'&&el.style.zIndex==='99999';}).pop();
+    if(dlg){dlg.click();return true;} // the action-type box treats a click on its backdrop as "cancel"
+    var mm=byId('moreMenu');if(mm&&mm.classList.contains('open')){mm.classList.remove('open');return true;}
+    var m=topModal();
+    if(m){
+      var fn=CLOSERS[m.id];
+      try{if(fn&&typeof window[fn]==='function')window[fn]();else m.classList.remove('open');}
+      catch(e){try{m.classList.remove('open');}catch(_){}}
+      return true;
+    }
+    return false;
+  }
+  function exitNow(){
+    try{var A=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;if(A&&A.exitApp){A.exitApp();return;}}catch(e){}
+    try{if(navigator.app&&navigator.app.exitApp){navigator.app.exitApp();return;}}catch(e){}
+  }
+
+  /* ---- history mode ---- */
+  var MAXD=24, MIND=12, ignorePops=0;
+  function idx(){var s=history.state;return(s&&s.po==='g'&&typeof s.i==='number')?s.i:0;}
+  // Builds the spare entries. ONLY ever called from a real tap / key press (see "touched" below).
+  function topUp(){
+    try{
+      var i=idx();if(i>=MIND)return;
+      if(!(history.state&&history.state.po==='g'))history.replaceState({po:'g',i:0},''); // the page itself = depth 0
+      for(var k=i+1;k<=MAXD;k++)history.pushState({po:'g',i:k},'');
+    }catch(e){}
+  }
+  function touched(){armedAt=0;topUp();} // any tap cancels a pending "press again to exit" and refills the spare entries
+  ['touchend','pointerup','click','keydown'].forEach(function(t){document.addEventListener(t,touched,{capture:true,passive:true});});
+
+  /* one back press. source: 'history' (the page was popped back one entry) or 'event' (Cordova / Capacitor back event) */
+  function onBack(source,depthNow){
+    var now=Date.now();
+    if(source==='event'&&now-lastAt<80)return;lastAt=now;
+    var used=false;try{used=closeOne();}catch(e){}
+    if(used){armedAt=0;return;} // closed one screen: the next press is simply the next spare entry
+    if(armedAt&&now-armedAt<EXIT_WINDOW){armedAt=0;exitNow();return;} // 2nd press (event wrappers; in history mode it normally exits by itself, see below)
+    armedAt=now;say(isAr()?'اضغط رجوع مرة أخرى للخروج':'Press back again to exit');
+    // History mode: step back to the very first entry so that the NEXT press has nothing behind it and leaves the app
+    // (a history jump made by the page itself is not affected by the "skip entries without a tap" rule).
+    if(source==='history'&&depthNow>0){ignorePops++;try{history.go(-depthNow);}catch(e){ignorePops=0;}}
+  }
+  window.addEventListener('popstate',function(ev){
+    if(ignorePops>0){ignorePops--;return;} // the jump we made ourselves
+    var s=ev.state;onBack('history',(s&&s.po==='g'&&typeof s.i==='number')?s.i:0);
+  });
+
+  /* --- Cordova / Capacitor wrappers deliver the hardware button as an event instead of history --- */
+  document.addEventListener('backbutton',function(e){try{e.preventDefault();}catch(_){}onBack('event',0);},false);
+  try{var App=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
+    if(App&&typeof App.addListener==='function'){var p=App.addListener('backButton',function(){onBack('event',0);});if(p&&p.catch)p.catch(function(){});}}catch(e){}
+})();
+
 </script>
 </body>
 </html>
