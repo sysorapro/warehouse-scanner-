@@ -2557,12 +2557,14 @@ const AD_MODES={
     title:['تقرير أوامر التوريد والملفات الخاصة','PO & Private Files report'],detailTitle:['تفاصيل المستند','Document details'],
     cols:['Source','Department','Doc No.','Name','ActionType','Items','Emp.No','Employee Name','Last Date'], // Last Date = latest scan, date + time
     detailCols:['Item Code','Item Name','ShelfNo','ActionType','Emp.No','Employee Name','Scanned','Scan.Date'], // Scan.Date = scan date + time
+    ix:{code:0,name:1,shelf:2,action:3,emp:[4,5]},
     emp:[6,7],del:-1},
   fu:{sources:['FileUploade','FileUploadeBackup'],kind:'fileupload',
     title:['تقرير الملفات العامة (FileUploade)','Public Files report (FileUploade)'],detailTitle:['تفاصيل الملف','Sheet details'],
-    cols:['Source','Department','SheetNo.','SheetName','ActionType','Items','Upload date','PersonalName','Employee Name','Trans.Date','Deletion','Deletion date'], // Trans.Date = latest transfer, date + time
-    detailCols:['Item Code','Item Name','ShelfNo','ActionType','PersonalName','Employee Name','Upload date','Trans.Date','Scanned','Scan.Date','Deletion','Deletion date'],
-    emp:[7,8],del:10}
+    cols:['Source','Department','SheetNo.','SheetName','ActionType','Items','Upload date','Trans.Status','PersonalName','Employee Name','Trans.Date','Deletion','Deletion date'], // Trans.Date = latest transfer, date + time
+    detailCols:['ActionType','Item Code','Item Name','Upload date','Trans.Status','PersonalName','Employee Name','Trans.Date','Scanned','ShelfNo','Scan.Date','Deletion','Deletion date'],
+    ix:{code:1,name:2,shelf:9,action:0,emp:[5,6]}, // positions inside detailCols (used by item search / highlight)
+    emp:[8,9],del:11}
 };
 let adMode='po';
 let AD_SOURCES=AD_MODES.po.sources, AD_COLUMNS=AD_MODES.po.cols, AD_DETAIL_COLUMNS=AD_MODES.po.detailCols;
@@ -2660,7 +2662,7 @@ function adSetMode(m){
 function adParseFu(txt,src,nm){
   if(!String(txt||'').trim())return[];
   return parseFileUploadCSV(txt).map(r=>({src,department:r.department,docNo:r.sheetNo,docName:r.sheetName,actionType:fmtActionType(r.actionType),shelf:r.shelfCode,
-    itemCode:r.itemCode,itemName:r.itemName,empNo:r.personalName,empName:nm(r.personalName),uploadDate:r.uploadDate,date:r.transDate,time:r.transTime,
+    itemCode:r.itemCode,itemName:r.itemName,transStatus:r.status,empNo:r.personalName,empName:nm(r.personalName),uploadDate:r.uploadDate,date:r.transDate,time:r.transTime,
     scanned:String(r.scannedFlag||'').trim().toUpperCase()==='OK'?'OK':'',scanDate:fuJoinDT(r.scanDate,r.scanTime),transDT:fuJoinDT(r.transDate,r.transTime),
     deletion:String(r.deletion||'').trim().toUpperCase()==='OK'?'OK':'',deletionDate:r.deletionDate}));
 }
@@ -2738,10 +2740,11 @@ function adRebuild(){
   adReport.all.filter(r=>fuRowInRange({uploadDate:r.uploadDate,transDate:r.date},range)).forEach(r=>{
     const key=r.src+'|'+r.docNo;
     let g=groups.get(key);
-    if(!g){g={key,src:r.src,docNo:r.docNo,depts:new Set(),names:new Set(),acts:new Map(),emps:[],empNames:[],stamps:[],ups:[],dels:[],delOk:0,n:0};groups.set(key,g);itemsByKey[key]=[];}
+    if(!g){g={key,src:r.src,docNo:r.docNo,depts:new Set(),names:new Set(),acts:new Map(),emps:[],empNames:[],stats:new Set(),stamps:[],ups:[],dels:[],delOk:0,n:0};groups.set(key,g);itemsByKey[key]=[];}
     itemsByKey[key].push(r);g.n++;
     if(r.department)g.depts.add(r.department);
     if(r.docName)g.names.add(r.docName);
+    if(r.transStatus)g.stats.add(r.transStatus);
     if(r.actionType)g.acts.set(r.actionType,(g.acts.get(r.actionType)||0)+1);
     if(r.empNo&&g.emps.indexOf(r.empNo)<0)g.emps.push(r.empNo);
     if(r.empName&&g.empNames.indexOf(r.empName)<0)g.empNames.push(r.empName);
@@ -2754,7 +2757,7 @@ function adRebuild(){
   groups.forEach(g=>{
     const latest=g.stamps.length?g.stamps.slice().sort((a,b)=>b.ms-a.ms)[0]:null,up=g.ups.length?g.ups.slice().sort((a,b)=>a.ms-b.ms)[0]:null;
     rows.push({key:g.key,src:g.src,department:Array.from(g.depts).join(' / '),docNo:g.docNo,docName:Array.from(g.names).join(' / '),
-      actionType:Array.from(g.acts.entries()).sort((a,b)=>b[1]-a[1]).map(x=>x[0]).join(' / '),items:g.n,uploadDate:up?up.d:'',
+      actionType:Array.from(g.acts.entries()).sort((a,b)=>b[1]-a[1]).map(x=>x[0]).join(' / '),items:g.n,uploadDate:up?up.d:'',transStatus:Array.from(g.stats).join(' / '),
       empNo:g.emps.join(' / '),empName:g.empNames.join(' / '),date:latest?latest.d:'',time:latest?latest.t:'',
       deletion:g.delOk===0?'':(g.delOk===g.n?'OK':'PARTIAL'),deletionDate:g.dels.length?g.dels.slice().sort((a,b)=>b.ms-a.ms)[0].d:'',_ms:latest?latest.ms:0});
   });
@@ -2764,7 +2767,7 @@ function adRebuild(){
 function adCells(r){
   const ar=diagIsAr();
   if(adMode==='fu'){
-    return[r.src,r.department,r.docNo,r.docName,r.actionType,r.items,r.uploadDate,r.empNo,r.empName,fuJoinDT(r.date,r.time),
+    return[r.src,r.department,r.docNo,r.docName,r.actionType,r.items,r.uploadDate,r.transStatus||'',r.empNo,r.empName,fuJoinDT(r.date,r.time),
       r.deletion==='OK'?'OK':(r.deletion==='PARTIAL'?(ar?'جزئي':'Partial'):''),r.deletionDate||''];
   }
   return[r.src,r.department,r.docNo,r.docName,r.actionType,r.items,r.empNo,r.empName,fuJoinDT(r.date,r.time)];
@@ -2785,7 +2788,8 @@ function adCompute(){
   const field=String((document.getElementById('adFieldFilter')||{}).value||'all');
   const src=String((document.getElementById('adSourceFilter')||{}).value||'all');
   const itemOnlyField=field==='itemCode'||field==='shelfNo';
-  const itemCols=field==='itemCode'?[0,1]:(field==='shelfNo'?[2]:(field==='all'?[0,1,2,3,4,5]:null)); // columns of AD_DETAIL_COLUMNS searched per item
+  const IX=AD_MODES[adMode].ix;
+  const itemCols=field==='itemCode'?[IX.code,IX.name]:(field==='shelfNo'?[IX.shelf]:(field==='all'?[IX.code,IX.name,IX.shelf,IX.action].concat(IX.emp):null)); // columns of AD_DETAIL_COLUMNS searched per item
   out.q=q;
   const dupCodes=adDupeOnly?adDuplicateItemCodes():null;
   out.dupCount=dupCodes?dupCodes.size:0;
@@ -2861,7 +2865,7 @@ function adMakeFilesTable(shown,q){
       cells.forEach(c=>{
         const r=document.createElement('tr');
         c.forEach((v,k)=>{const d=document.createElement('td');d.textContent=String(v);
-          const hit=qq&&(k===0||k===1||k===2)&&String(v).toLowerCase().indexOf(qq)>=0;
+          const hit=qq&&(k===AD_MODES[adMode].ix.code||k===AD_MODES[adMode].ix.name||k===AD_MODES[adMode].ix.shelf)&&String(v).toLowerCase().indexOf(qq)>=0;
           d.style.cssText='padding:4px 7px;border-bottom:1px solid var(--border);white-space:nowrap;'+(hit?'color:var(--amber-fg);font-weight:800;':'');r.appendChild(d);});
         sub.appendChild(r);
       });
@@ -2913,14 +2917,14 @@ function renderAllFilesReport(){
 }
 // ---- one document's items ----
 function adDetailCells(items){
-  if(adMode==='fu')return items.map(r=>[r.itemCode,r.itemName,r.shelf,r.actionType,r.empNo,r.empName,r.uploadDate||'',r.transDT||'',r.scanned,r.scanDate||'',r.deletion,r.deletionDate||'']);
+  if(adMode==='fu')return items.map(r=>[r.actionType,r.itemCode,r.itemName,r.uploadDate||'',r.transStatus||'',r.empNo,r.empName,r.transDT||'',r.scanned,r.shelf,r.scanDate||'',r.deletion,r.deletionDate||'']);
   return items.map(r=>[r.itemCode,r.itemName,r.shelf,r.actionType,r.empNo,r.empName,r.scanned,r.scanDate||'']);
 }
 function adDetailShown(){
   const items=adReport.itemsByKey[adDetailKey]||[],cells=adDetailCells(items);
   const q=String((document.getElementById('adDetailSearch')||{}).value||'').trim().toLowerCase();
   const field=String((document.getElementById('adDetailField')||{}).value||'all');
-  const cols={itemCode:[0,1],shelf:[2],actionType:[3],employee:[4,5]}[field];
+  const IX=AD_MODES[adMode].ix,cols={itemCode:[IX.code,IX.name],shelf:[IX.shelf],actionType:[IX.action],employee:IX.emp}[field];
   const out=[];
   cells.forEach((c,i)=>{
     const ok=!q||(cols?cols:c.map((_,k)=>k)).some(k=>String(c[k]).toLowerCase().indexOf(q)>=0);
@@ -3249,10 +3253,10 @@ function loadShelfLinkSheetsFromStorage(){
 // required for this mode.
 const FILE_UPLOAD_DATA_OWNER = 'sysorapro';
 const FILE_UPLOAD_DATA_REPO = 'warehouse-scanner-Data';
-// Column order of FileUploade.csv / FileUploadeBackup.csv (v6.6.0).
+// Column order of FileUploade.csv / FileUploadeBackup.csv (Trans.Status before PersonalName; ShelfNo / Scan.Date right after Scanned, before Deletion).
 // Trans.Date = date AND time of the Public -> Private transfer ("DD/MM/YYYY HH:MM:SS") — the old separate Trans.Time column is gone.
 // Scanned / ShelfNo / Scan.Date ("DD/MM/YYYY HH:MM:SS") are filled only when the sheet is shared (see markFileUploadItemsScannedOnShare).
-const FILE_UPLOAD_FINAL_HEADERS=['Department','SheetNo.','SheetName','ActionType','Item Code','Item Name','Upload date','PersonalName','Trans.Status','Trans.Date','Scanned','ShelfNo','Scan.Date','Deletion','Deletion date'];
+const FILE_UPLOAD_FINAL_HEADERS=['Department','SheetNo.','SheetName','ActionType','Item Code','Item Name','Upload date','Trans.Status','PersonalName','Trans.Date','Scanned','ShelfNo','Scan.Date','Deletion','Deletion date'];
 const FILE_UPLOAD_URL = 'https://raw.githubusercontent.com/sysorapro/warehouse-scanner-Data/main/FileUploade.csv';
 const FILE_UPLOAD_GITHUB_PATH = 'FileUploade.csv';
 const FILE_UPLOAD_BACKUP_GITHUB_PATH = 'FileUploadeBackup.csv'; // the archive file — same repo/branch, created by the offline archiving tool
@@ -4008,6 +4012,28 @@ function fuApplyScanStateToRow(row,cols,st){
   }
   return changed;
 }
+function fuReorderMatrixToFinal(matrix){
+  // Returns true if the header/rows were changed. Columns are matched by name; missing ones are added empty,
+  // columns not in FILE_UPLOAD_FINAL_HEADERS are kept (appended after) so no data is ever dropped.
+  if(!matrix.length)return false;
+  const norm=fuScanColNormHeader, old=matrix[0].map(x=>String(x??'')), used=new Set(), order=[];
+  const alias={'sheetno':['sheetno','sheetnumber'],'transstatus':['transstatus'],'shelfno':['shelfno'],'uploaddate':['uploaddate'],'deletiondate':['deletiondate']};
+  for(const h of FILE_UPLOAD_FINAL_HEADERS){
+    const keys=alias[norm(h)]||[norm(h)];
+    let found=-1;
+    for(let i=0;i<old.length&&found<0;i++){if(!used.has(i)&&keys.indexOf(norm(old[i]))>=0)found=i;}
+    if(found>=0)used.add(found);
+    order.push(found);
+  }
+  for(let i=0;i<old.length;i++)if(!used.has(i))order.push(i);
+  const same=order.length===old.length&&order.every((v,i)=>v===i)&&FILE_UPLOAD_FINAL_HEADERS.every((h,i)=>old[i]===h);
+  if(same)return false;
+  const hdr=order.map((v,i)=>v<0?FILE_UPLOAD_FINAL_HEADERS[i]:(i<FILE_UPLOAD_FINAL_HEADERS.length?FILE_UPLOAD_FINAL_HEADERS[i]:old[v]));
+  const out=[hdr];
+  for(let r=1;r<matrix.length;r++){const src=matrix[r];out.push(order.map(v=>v<0?'':String(src[v]??'')));}
+  matrix.length=0;out.forEach(r=>matrix.push(r));
+  return true;
+}
 async function applyScannedFlagToBackupFile(sheetNo,scanState){
   // Returns true only when matching rows for this sheet were found in the archive file (and updated or already identical).
   if(!(await ensureNotBelowMinVersion()))return false;
@@ -4017,6 +4043,7 @@ async function applyScannedFlagToBackupFile(sheetNo,scanState){
     catch(e){ return false; } // no archive file yet (404) or unreachable — nothing to update
     const matrix=parseCSVMatrix(current.text);
     if(!matrix.length)return false;
+    const reordered=fuReorderMatrixToFinal(matrix); // keep the archive in the standard column order (no data dropped)
     const header=matrix[0].map(x=>String(x??''));
     const idx={};header.forEach((h,i)=>{const k=fuScanColNormHeader(h);if(k&&idx[k]===undefined)idx[k]=i;});
     const col=(...names)=>{for(const n of names){const k=fuScanColNormHeader(n);if(idx[k]!==undefined)return idx[k];}return -1;};
@@ -4034,7 +4061,7 @@ async function applyScannedFlagToBackupFile(sheetNo,scanState){
       matchedAny=true;
       if(fuApplyScanStateToRow(row,cols,scanState.get(code)))changed=true;
     }
-    if(!changed)return matchedAny;
+    if(!changed&&!(reordered&&matchedAny))return matchedAny;
     try{
       await githubPutFile(FILE_UPLOAD_BACKUP_GITHUB_PATH,serializeCSVMatrix(matrix),current.sha,'Warehouse Scanner: sync Scanned/ShelfNo/Scan.Date on share — '+sheetNo);
       return true;
@@ -5254,7 +5281,7 @@ function renderFileUploadSheet(){
 function buildFileUploadAOA(){
   const header=[...FILE_UPLOAD_FINAL_HEADERS];
   // Same order as FILE_UPLOAD_FINAL_HEADERS.
-  const rows=fileUploadList.map(r=>[r.department||'',r.sheetNo||'',r.sheetName||'',fmtActionType(r.actionType),r.itemCode||'',r.itemName||'',r.uploadDate||'',r.personalName||r.userName||'',r.status||'',
+  const rows=fileUploadList.map(r=>[r.department||'',r.sheetNo||'',r.sheetName||'',fmtActionType(r.actionType),r.itemCode||'',r.itemName||'',r.uploadDate||'',r.status||'',r.personalName||r.userName||'',
     [r.transDate,r.transTime].filter(Boolean).join(' '),r.scanned?'OK':'',r.scanned?String(r.shelf||r.shelfCode||r.scannedValue||''):'',r.scanned?[r.scanDate,r.scanTime].filter(Boolean).join(' '):'',r.deletion||'',r.deletionDate||'']);
   return [header,...rows];
 }
