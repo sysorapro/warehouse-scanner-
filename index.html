@@ -3464,8 +3464,8 @@ async function loadUserContacts(){
 }
 function waDefaultTemplate(mode){
   return mode==='old'
-    ?'السلام عليكم {name}،\nيوجد إصدار أحدث من تطبيق سكانر المستودع ({latest}) وجهازك شغال على الإصدار {version}.\nمن فضلك افتح التطبيق مع اتصال بالإنترنت وحدّثه لآخر إصدار قبل الاستمرار في العمل.\nشكراً.'
-    :'السلام عليكم {name}،\nتنبيه: تم إصدار النسخة {latest} من تطبيق سكانر المستودع.\nمن فضلك تأكد إن التطبيق عندك اتحدّث لآخر إصدار.\nشكراً.';
+    ? 'عزيزي {name}،\nيوجد إصدار جديد هو ({latest}) لتطبيق Warehouse Scanner وجهازك يعمل بالإصدار ({version}).\nمن فضلك افتح التطبيق مع اتصال بالإنترنت وحدّثه لآخر إصدار قبل الاستمرار في العمل.\nشكراً.'
+    : 'عزيزي {name}\nتنبيه هام !!!!!\nتم تحديث تطبيق Warehouse Scanner إلى اصدار ({latest})\nفضلاً قم بتحديث التطبيق لآخر إصدار\nشكراً.';
 }
 function waMessageFor(t){
   const tpl=String((document.getElementById('waTemplate')||{}).value||'');
