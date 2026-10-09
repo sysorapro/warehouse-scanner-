@@ -1,0 +1,30 @@
+# Rebuilds the "sync" folder (delta-update index) whenever items.csv or shelves.csv is changed.
+name: Build sync index
+on:
+  push:
+    paths:
+      - 'items.csv'
+      - 'shelves.csv'
+      - 'tools/build-sync-index.js'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-sync-index
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build the index
+        run: node tools/build-sync-index.js
+      - name: Commit the result
+        run: |
+          git config user.name "sync-index-bot"
+          git config user.email "sync-index-bot@users.noreply.github.com"
+          git add sync
+          git diff --cached --quiet || (git commit -m "Update sync index" && git push)
