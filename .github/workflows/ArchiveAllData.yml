@@ -1,0 +1,45 @@
+# ArchiveAllData — moves PoOrders.csv, then PrivateFile.csv, into ArchiveAllData.csv.
+# Runs every Friday at 22:00 UTC = Saturday 00:00 in Cairo (01:00 while Egypt is on summer time). You can also run it by hand
+# from the Actions tab ("Run workflow"); a manual run is a DRY RUN unless you untick the box.
+name: ArchiveAllData
+on:
+  schedule:
+    - cron: '0 22 * * 5'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only show what would be moved (nothing changes)'
+        type: boolean
+        default: true
+permissions:
+  contents: write
+concurrency:
+  group: archive-all-data
+  cancel-in-progress: false
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Move PoOrders then PrivateFile into ArchiveAllData
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: |
+          git config user.name "archive-bot"
+          git config user.email "archive-bot@users.noreply.github.com"
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          rc=0
+          for i in 1 2 3 4 5; do
+            node tools/archive-all-data.js || rc=$?
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing to commit."; exit $rc; fi
+            git commit -m "ArchiveAllData: move PoOrders and PrivateFile into the archive"
+            if git push; then exit $rc; fi
+            echo "Push rejected (a device wrote meanwhile) - starting again from the latest files (try $i)."
+            git fetch origin "$BRANCH" && git reset --hard "origin/$BRANCH"
+            rc=0
+          done
+          exit 1
