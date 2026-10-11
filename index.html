@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.7.3 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.7.4 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.7.3 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.7.4 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.7.3 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.7.4 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.7.3 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.7.4 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1107,6 +1107,19 @@ window.DATA_GITHUB_CONFIG = {
   <input type="file" id="backupRestoreInput" accept=".json,application/json" style="display:none;" onchange="handleBackupFileChosen(event)">
 </div>
 
+<!-- Archive: moves PoOrders then PrivateFile into ArchiveAllData.csv (Admin only), shown like the "Update All Data" screen -->
+<div class="modal app-modal" id="archiveModal" style="z-index:262;">
+  <div class="modal-top">
+    <button type="button" onclick="closeArchiveScreen()">‹</button>
+    <span id="archiveTitle">أرشفة البيانات</span>
+    <span style="width:38px;"></span>
+  </div>
+  <div style="padding:16px 18px; overflow:auto;">
+    <div id="archiveSummary" style="font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center;line-height:1.7;"></div>
+    <div id="archiveRows" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</div>
+
 <div class="modal app-modal" id="profileModal">
   <div class="modal-top">
     <button onclick="closeProfile()">‹</button>
@@ -1270,8 +1283,8 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.7.3';
-const APP_VERSION_DATE='2026-10-10';
+const APP_VERSION='v6.7.4';
+const APP_VERSION_DATE='2026-10-06';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
 let diagRateMem=null, diagRateSavedAt=0, diagStoragePersisted=null, diagLastSaveToastAt=0, diagLastRows=[];
@@ -1977,6 +1990,164 @@ async function applyRestore(){
 }
 
 // ---------- the Backup & Restore screen ----------
+// ===== ArchiveAllData (Admin): move the rows of PoOrders.csv, then PrivateFile.csv, into ArchiveAllData.csv =====
+// One file at a time, in this order. For each file: (1) the rows are copied into ArchiveAllData.csv and that write is confirmed;
+// (2) only THEN are exactly those rows removed from the original file (rows added by other devices meanwhile stay).
+// Nothing is ever deleted before it is safely in the archive, and running it again never duplicates anything.
+const ARCHIVE_ALL_PATH='ArchiveAllData.csv';
+const ARCHIVE_ALL_HEADERS=['FileType','Department','Sheet/PONo','SheetName','ActionType','ShelfNo','Item Code','Item Name','Emp.No','Emp.Name','Scan.Date'];
+const ARCHIVE_PO_SHEETNAME='PO From Home Screen'; // PoOrders rows come from the home screen: there is no file name
+let archiveRunning=false;
+const archiveNorm=(x)=>String(x==null?'':x).replace(/^\uFEFF/,'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+const archiveKey=(r)=>r.map(v=>String(v==null?'':v)).join('\u241F');
+function archiveCounts(rows){const m=new Map();rows.forEach(r=>{const k=archiveKey(r);m.set(k,(m.get(k)||0)+1);});return m;}
+function archiveIndex(header){const idx={};header.forEach((h,i)=>{const k=archiveNorm(h);if(k&&idx[k]===undefined)idx[k]=i;});return idx;}
+function archiveMapRow(kind,idx,r){
+  const g=(k)=>{const i=idx[k];return i===undefined?'':String(r[i]==null?'':r[i]);};
+  if(kind==='PoOrders')return ['PoOrders',g('department'),g('pono'),ARCHIVE_PO_SHEETNAME,g('actiontype'),g('shelfno'),g('itemcode'),g('itemname'),g('empno'),g('empname'),g('scandate')];
+  return ['PrivateFile',g('department'),g('sheetno'),g('sheetname'),g('actiontype'),g('shelfno'),g('itemcode'),g('itemname'),g('empno'),g('empname'),g('scandate')];
+}
+// Reads a CSV from the data repo. archive=true: a missing / empty file starts with the header; a different header is refused.
+async function archiveRead(path,firstCol,archive){
+  let cur;
+  try{ cur=await githubGetFile(path); }
+  catch(e){ if(e&&e.status===404&&archive)return {matrix:[ARCHIVE_ALL_HEADERS.slice()],sha:'',created:true}; if(e&&e.status===404)return {matrix:null,sha:''}; throw e; }
+  const text=String(cur.text||'');
+  if(!text.trim()){
+    if(cur.sha&&cur.size>0)throw new Error(path+' could not be read');
+    return archive?{matrix:[ARCHIVE_ALL_HEADERS.slice()],sha:cur.sha||'',created:true}:{matrix:null,sha:cur.sha||''};
+  }
+  const matrix=parseCSVMatrix(text);
+  if(!matrix.length)throw new Error(path+' is empty');
+  if(archive){
+    const want=ARCHIVE_ALL_HEADERS.map(archiveNorm),have=matrix[0].map(archiveNorm);
+    if(want.length!==have.length||want.some((w,i)=>w!==have[i]))throw new Error('The header of '+path+' is not the expected one ('+ARCHIVE_ALL_HEADERS.join(', ')+')');
+  }else if(archiveNorm(matrix[0][0])!==archiveNorm(firstCol)){
+    throw new Error(path+': unexpected first column "'+matrix[0][0]+'"');
+  }
+  return {matrix,sha:cur.sha||''};
+}
+async function archiveMoveOne(spec,report){
+  const sleep=(ms)=>new Promise(res=>setTimeout(res,ms));
+  // 1) the rows to move
+  report({stage:'read',pct:8});
+  const src=await archiveRead(spec.path,'Department',false);
+  if(!src.matrix||src.matrix.length<2){report({stage:'empty',pct:100,total:0,moved:0});return {total:0,moved:0};}
+  const header=src.matrix[0],rows=src.matrix.slice(1),idx=archiveIndex(header);
+  for(const need of spec.required){if(idx[need]===undefined)throw new Error(spec.path+': column "'+need+'" not found');}
+  const mapped=rows.map(r=>archiveMapRow(spec.kind,idx,r));
+  report({stage:'archive',pct:25,total:rows.length});
+  // 2) copy them into ArchiveAllData.csv (rows that are already there from an interrupted run are not added again)
+  let added=0, safeInArchive=false;
+  for(let attempt=0;attempt<8&&!safeInArchive;attempt++){
+    const arch=await archiveRead(ARCHIVE_ALL_PATH,'FileType',true);
+    report({stage:'archive',pct:40,total:rows.length});
+    const have=archiveCounts(arch.matrix.slice(1)),seen=new Map(),toAdd=[];
+    mapped.forEach(m=>{const k=archiveKey(m),n=(seen.get(k)||0)+1;seen.set(k,n);if(n>(have.get(k)||0))toAdd.push(m);});
+    if(!toAdd.length){safeInArchive=true;break;} // every row is already in the archive (an interrupted earlier run)
+    toAdd.forEach(m=>arch.matrix.push(m));
+    try{
+      await githubPutFile(ARCHIVE_ALL_PATH,serializeCSVMatrix(arch.matrix),arch.sha,'Warehouse Scanner: archive '+toAdd.length+' '+spec.kind+' row(s)');
+      added=toAdd.length;safeInArchive=true;
+    }catch(e){ if(e&&e.status===409){await sleep(300);continue;} throw e; }
+  }
+  // NOTHING is removed from the original file unless the rows are confirmed to be in the archive.
+  if(!safeInArchive)throw new Error('ArchiveAllData.csv is being changed by someone else — nothing was removed, try again');
+  report({stage:'archived',pct:60,total:rows.length});
+  // 3) remove exactly those rows from the original file (anything added meanwhile stays)
+  let removed=false;
+  for(let attempt=0;attempt<8;attempt++){
+    const fresh=await archiveRead(spec.path,'Department',false);
+    report({stage:'clear',pct:75,total:rows.length});
+    if(!fresh.matrix){removed=true;break;}
+    const toRemove=archiveCounts(rows),keep=[fresh.matrix[0]];let gone=0;
+    fresh.matrix.slice(1).forEach(r=>{const k=archiveKey(r),n=toRemove.get(k)||0;if(n>0){toRemove.set(k,n-1);gone++;}else keep.push(r);});
+    if(!gone){removed=true;break;} // already removed
+    try{
+      await githubPutFile(spec.path,serializeCSVMatrix(keep),fresh.sha,'Warehouse Scanner: archived '+gone+' row(s) to '+ARCHIVE_ALL_PATH);
+      removed=true;break;
+    }catch(e){ if(e&&e.status===409){await sleep(300);continue;} const err=new Error('copied to the archive but could not be cleared from '+spec.path+': '+(e&&e.message||e));err.archived=true;throw err; }
+  }
+  if(!removed){const err=new Error('copied to the archive but '+spec.path+' kept changing — run it again');err.archived=true;throw err;}
+  report({stage:'done',pct:100,total:rows.length,moved:rows.length,added});
+  return {total:rows.length,moved:rows.length,added};
+}
+function archiveBuildRows(){
+  const rows=document.getElementById('archiveRows'),ar=diagIsAr();if(!rows)return;
+  const items=[['po','PoOrders'],['pf','PrivateFile']];
+  rows.innerHTML=items.map(([k,label])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:12px 13px;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <span id="archIcon-${k}" style="font-size:18px;width:24px;text-align:center;">⏸</span>
+      <div style="flex:1;min-width:0;"><div style="font-family:'Cairo';font-weight:900;font-size:13px;">${label} ← ArchiveAllData</div><div id="archStatus-${k}" style="font-size:10.5px;color:var(--muted);margin-top:2px;">${ar?'في الانتظار':'Waiting'}</div></div>
+      <span id="archCount-${k}" style="font-size:10px;color:var(--muted);white-space:nowrap;"></span>
+    </div>
+    <div style="height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden;margin-top:9px;"><div id="archBar-${k}" style="height:100%;width:0;background:var(--mint);transition:width .25s ease;"></div></div>
+  </div>`).join('');
+}
+function archiveSetRow(k,o){
+  const ar=diagIsAr(),icon=document.getElementById('archIcon-'+k),st=document.getElementById('archStatus-'+k),bar=document.getElementById('archBar-'+k),cnt=document.getElementById('archCount-'+k);
+  if(!icon||!st||!bar)return;
+  const n=o.total!=null?o.total:0, rowsTxt=n?(ar?(n+' صف'):(n+' rows')):'';
+  const text={
+    read:ar?'جاري قراءة الملف...':'Reading the file...',
+    archive:ar?('جاري نقل '+n+' صف إلى ArchiveAllData...'):('Copying '+n+' rows to ArchiveAllData...'),
+    archived:ar?'تم النقل للأرشيف — جاري تفريغ الملف الأصلي...':'Copied — clearing the original file...',
+    clear:ar?'جاري تفريغ الملف الأصلي...':'Clearing the original file...',
+    done:ar?('تم النقل: '+n+' صف'):('Moved: '+n+' rows'),
+    empty:ar?'لا توجد بيانات للنقل':'Nothing to move'
+  }[o.stage]||'';
+  if(o.stage==='error'){icon.textContent='❌';st.textContent=o.message||'';bar.style.background='var(--red)';bar.style.width='100%';cnt.textContent='';return;}
+  icon.textContent=(o.stage==='done'||o.stage==='empty')?'✅':'🔄';
+  st.textContent=text;bar.style.background='var(--mint)';bar.style.width=(o.pct||0)+'%';
+  cnt.textContent=(rowsTxt?rowsTxt+' · ':'')+(o.pct||0)+'%';
+}
+function closeArchiveScreen(){
+  if(archiveRunning){ try{toast(diagIsAr()?'الأرشفة جارية — استنى لحد ما تخلص':'Archiving is running — please wait','warning');}catch(e){} return; }
+  try{document.getElementById('archiveModal').classList.remove('open');}catch(e){}
+}
+async function runArchiveAllData(){
+  const ar=diagIsAr();
+  if(archiveRunning)return;
+  if(!isAdminUser())return;
+  if(!navigator.onLine||!fileUploadGitHubConfigured()){toast(ar?'لازم تكون متصل بالإنترنت':'You must be online','warning');return;}
+  archiveRunning=true; // taken from the first tap on, so a second tap cannot start a second run
+  let yes=false;
+  try{
+    yes=await customConfirm(ar
+      ?'سيتم نقل كل بيانات PoOrders ثم PrivateFile إلى ArchiveAllData وتفريغ الملفين الأصليين بعد التأكد من النقل. هل تريد المتابعة؟'
+      :'All rows of PoOrders, then PrivateFile, will be moved to ArchiveAllData and the two original files cleared once the move is confirmed. Continue?');
+  }catch(e){ yes=false; }
+  if(!yes){ archiveRunning=false; return; }
+  document.getElementById('archiveTitle').textContent=ar?'أرشفة البيانات':'Archive data';
+  document.getElementById('archiveModal').classList.add('open');
+  archiveBuildRows();
+  const summary=document.getElementById('archiveSummary');
+  summary.textContent=ar?'جاري النقل بالتتابع: PoOrders ثم PrivateFile...':'Moving one file at a time: PoOrders, then PrivateFile...';
+  const specs=[
+    {k:'po',kind:'PoOrders',path:POORDERS_GITHUB_PATH,required:['department','pono','actiontype','shelfno','itemcode','itemname','empno','empname','scandate']},
+    {k:'pf',kind:'PrivateFile',path:PRIVATEFILE_GITHUB_PATH,required:['department','sheetno','sheetname','actiontype','shelfno','itemcode','itemname','empno','empname','scandate']}
+  ];
+  const result={};let failed=null;
+  try{
+    for(const sp of specs){
+      archiveSetRow(sp.k,{stage:'read',pct:3});
+      try{
+        result[sp.k]=await archiveMoveOne(sp,(o)=>archiveSetRow(sp.k,o));
+      }catch(e){
+        archiveSetRow(sp.k,{stage:'error',message:(ar?'فشل: ':'Failed: ')+(e&&e.message||e)+(e&&e.archived?(ar?' — لا تقلق، البيانات محفوظة في الأرشيف ولن تتكرر عند إعادة المحاولة':' — your data is safe in the archive and will not be duplicated on retry'):'')});
+        try{diagLogError('archive-'+sp.kind,e);}catch(_){}
+        failed=sp.kind;break; // the next file is not started
+      }
+    }
+  }finally{ archiveRunning=false; }
+  if(failed){
+    summary.textContent=(ar?'⚠️ توقفت الأرشفة عند ':'⚠️ Archiving stopped at ')+failed+(ar?'. الملف التالي لم يبدأ. يمكنك إعادة المحاولة بأمان.':'. The next file was not started. You can safely try again.');
+    return;
+  }
+  const po=result.po?result.po.moved:0,pf=result.pf?result.pf.moved:0;
+  summary.textContent=ar?('✅ تمت الأرشفة — PoOrders: '+po+' صف · PrivateFile: '+pf+' صف'):('✅ Archived — PoOrders: '+po+' rows · PrivateFile: '+pf+' rows');
+  try{localStorage.setItem('warehouseScannerLastArchive',JSON.stringify({at:Date.now(),po,pf}));renderBackupScreen();}catch(e){}
+}
 function openBackupScreen(){
   pendingRestore=null;
   try{document.getElementById('backupModal').classList.add('open');}catch(e){}
@@ -2051,6 +2222,15 @@ function renderBackupScreen(){
       const none=!(pv.ordersNew.length||pv.sheetsNew.length||pv.reportsNew.length);
       c2.appendChild(btn(ar?'♻️ استرجاع المحدد':'♻️ Restore selected',applyRestore,true,none));
       c2.appendChild(btn(ar?'إلغاء':'Cancel',cancelRestore,false,false));
+    }
+
+    // ---- archive PoOrders + PrivateFile into ArchiveAllData (Admin only) ----
+    if(isAdminUser()){
+      const ca=card();
+      ca.appendChild(mk('div','font-weight:800;font-size:15px;margin-bottom:4px;',ar?'🗄 أرشفة البيانات':'🗄 Archive data'));
+      ca.appendChild(mk('div','font-size:12px;color:var(--muted);margin-bottom:4px;line-height:1.7;',ar?'ينقل بيانات PoOrders ثم PrivateFile إلى ملف ArchiveAllData.csv بالتتابع، ويفرّغ الملفين الأصليين بعد التأكد من النقل. بتتم تلقائيًا كل أسبوع من GitHub، وده للنقل الفوري.':'Moves the rows of PoOrders, then PrivateFile, into ArchiveAllData.csv one after the other and clears the two files once the move is confirmed. It also runs weekly on GitHub; this is for an immediate move.'));
+      try{const la=JSON.parse(localStorage.getItem('warehouseScannerLastArchive')||'null');if(la&&la.at)ca.appendChild(mk('div','font-size:11px;color:var(--muted);',(ar?'آخر نقل من هذا الجهاز: ':'Last move from this device: ')+diagLtr(diagFmtTime(la.at))+' · PoOrders '+la.po+' · PrivateFile '+la.pf));}catch(e){}
+      ca.appendChild(btn(ar?'نقل وأرشفة البيانات الآن':'Move and archive now',()=>{runArchiveAllData();},true,false));
     }
 
     // ---- saved report exports (local) ----
@@ -10548,7 +10728,7 @@ if ('serviceWorker' in navigator){
     fileUploadSheetsModal:'closeFileUploadSheets',fileUploadViewModal:'closeFileUploadView',syncDataModal:'closeSyncDataModal',reportsModal:'reportsBack',
     allFilesReportModal:'closeAllFilesReport',allFilesDetailModal:'closeAllFilesDetail',backupModal:'closeBackupScreen',profileModal:'closeProfile',
     diagModal:'closeDiagnostics',waNotifyModal:'closeWaNotify',fuIntegrityModal:'closeFileUploadIntegrityCheck',supportFormModal:'closeSupportForm',
-    changePasswordModal:'closeChangePassword'};
+    changePasswordModal:'closeChangePassword',archiveModal:'closeArchiveScreen'};
 
   function byId(i){return document.getElementById(i);}
   function shown(el){if(!el)return false;if(el.classList.contains('hidden'))return false;var d=el.style&&el.style.display;if(d==='none')return false;
