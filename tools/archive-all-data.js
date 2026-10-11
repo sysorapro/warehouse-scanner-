@@ -8,7 +8,7 @@
       * rows already in the archive (from an interrupted run) are not added twice; identical rows are all kept;
       * if ArchiveAllData.csv does not have the expected header, nothing is touched.
 
-    ArchiveAllData.csv columns:  FileType, Department, Sheet/PONo, SheetName, Item Code, Item Name, Emp.No, Emp.Name, Scan.Date
+    ArchiveAllData.csv columns:  FileType, Department, Sheet/PONo, SheetName, ActionType, ShelfNo, Item Code, Item Name, Emp.No, Emp.Name, Scan.Date
       PoOrders    -> FileType "PoOrders",    Sheet/PONo = PoNo,    SheetName = "PO From Home Screen" (these rows come from the home screen)
       PrivateFile -> FileType "PrivateFile", Sheet/PONo = SheetNo, SheetName = SheetName
 
@@ -19,7 +19,7 @@ const path = require('path');
 const DIR = path.resolve(process.env.DATA_DIR || '.');
 const DRY_RUN = String(process.env.DRY_RUN || 'false').toLowerCase() === 'true';
 const ARCHIVE = 'ArchiveAllData.csv';
-const ARCHIVE_HEADERS = ['FileType', 'Department', 'Sheet/PONo', 'SheetName', 'Item Code', 'Item Name', 'Emp.No', 'Emp.Name', 'Scan.Date'];
+const ARCHIVE_HEADERS = ['FileType', 'Department', 'Sheet/PONo', 'SheetName', 'ActionType', 'ShelfNo', 'Item Code', 'Item Name', 'Emp.No', 'Emp.Name', 'Scan.Date'];
 const PO_SHEETNAME = 'PO From Home Screen';
 
 // the same CSV reading / writing as the app: every field quoted, BOM, CRLF
@@ -57,8 +57,8 @@ function loadArchive() {
 }
 function mapRow(kind, idx, r) {
   const g = (k) => (idx[k] === undefined ? '' : String(r[idx[k]] == null ? '' : r[idx[k]]));
-  if (kind === 'PoOrders') return ['PoOrders', g('department'), g('pono'), PO_SHEETNAME, g('itemcode'), g('itemname'), g('empno'), g('empname'), g('scandate')];
-  return ['PrivateFile', g('department'), g('sheetno'), g('sheetname'), g('itemcode'), g('itemname'), g('empno'), g('empname'), g('scandate')];
+  if (kind === 'PoOrders') return ['PoOrders', g('department'), g('pono'), PO_SHEETNAME, g('actiontype'), g('shelfno'), g('itemcode'), g('itemname'), g('empno'), g('empname'), g('scandate')];
+  return ['PrivateFile', g('department'), g('sheetno'), g('sheetname'), g('actiontype'), g('shelfno'), g('itemcode'), g('itemname'), g('empno'), g('empname'), g('scandate')];
 }
 
 function moveOne(spec) {
@@ -84,8 +84,8 @@ function moveOne(spec) {
 }
 
 const SPECS = [
-  { kind: 'PoOrders', file: 'PoOrders.csv', required: ['department', 'pono', 'itemcode', 'itemname', 'empno', 'empname', 'scandate'] },
-  { kind: 'PrivateFile', file: 'PrivateFile.csv', required: ['department', 'sheetno', 'sheetname', 'itemcode', 'itemname', 'empno', 'empname', 'scandate'] }
+  { kind: 'PoOrders', file: 'PoOrders.csv', required: ['department', 'pono', 'actiontype', 'shelfno', 'itemcode', 'itemname', 'empno', 'empname', 'scandate'] },
+  { kind: 'PrivateFile', file: 'PrivateFile.csv', required: ['department', 'sheetno', 'sheetname', 'actiontype', 'shelfno', 'itemcode', 'itemname', 'empno', 'empname', 'scandate'] }
 ];
 console.log('ArchiveAllData — ' + (DRY_RUN ? 'DRY RUN (nothing is changed)' : 'REAL RUN'));
 let failed = false;
