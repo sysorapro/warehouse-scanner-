@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.0 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.0 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.0 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.9.0 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1283,7 +1283,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.9.0';
+const APP_VERSION='v6.9.1';
 const APP_VERSION_DATE='2026-10-18';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -3943,8 +3943,7 @@ function buildWaNoticeText(info){
 }
 function offerWhatsAppNotice(info){
   try{
-    // Same data already notified (e.g. Upload pressed again with nothing new): do not ask again. Skipping the dialog does not count as notified.
-    if(info&&info.sig&&waNoticeWasSent(info.sig))return;
+    // Shown after every confirmed upload / share, also when the same data is uploaded or shared again and in "upload only".
     const ar=lang==='ar', old=document.getElementById('waNoticeOverlay'); if(old)old.remove();
     const ov=document.createElement('div'); ov.id='waNoticeOverlay';
     ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:14px;';
@@ -3973,7 +3972,8 @@ function offerWhatsAppNotice(info){
 }
 // ---- Share / add-data chooser (Home screen, Saved orders, Private files) ----
 // Resolves 'share' (share the file, THEN add the data to the files), 'upload' (add the data, no sharing) or null (cancelled).
-function askShareMode(targets){
+function askShareMode(targets,offerSave){
+  askShareMode.saveChecked=false;
   return new Promise((resolve)=>{
     try{
       const ar=lang==='ar', old=document.getElementById('shareModeOverlay'); if(old)old.remove();
@@ -3982,10 +3982,19 @@ function askShareMode(targets){
       const card=document.createElement('div');
       card.style.cssText='width:100%;max-width:420px;max-height:92vh;overflow-y:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:16px;box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.45);';
       const mk=(tag,css,txt)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(txt!=null)e.textContent=txt;return e;};
-      let done=false; const finish=(v)=>{ if(done)return; done=true; try{ov.remove();}catch(e){} document.removeEventListener('keydown',onKey); resolve(v); };
+      let done=false, saveChk=null; const finish=(v)=>{ if(done)return; done=true; askShareMode.saveChecked=!!(v&&saveChk&&saveChk.checked); try{ov.remove();}catch(e){} document.removeEventListener('keydown',onKey); resolve(v); };
       const onKey=(e)=>{ if(e.key==='Escape')finish(null); };
       card.appendChild(mk('div','font-size:15px;font-weight:800;margin-bottom:4px;',ar?'اختر الإجراء':'Choose an action'));
       if(targets)card.appendChild(mk('div','font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;',(ar?'تُرفع البيانات إلى: ':'The data is uploaded to: ')+targets));
+      if(offerSave){
+        // "Save this order to Saved Orders as well" — ticked BEFORE choosing an option; saving never blocks or changes what follows.
+        const row=mk('label','display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);cursor:pointer;');
+        saveChk=document.createElement('input'); saveChk.type='checkbox'; saveChk.style.cssText='width:18px;height:18px;flex:none;accent-color:var(--amber);cursor:pointer;';
+        const txt=mk('div','');
+        txt.appendChild(mk('div','font-size:14px;font-weight:800;','💾 '+(ar?'حفظ هذا الأمر في الأوامر المحفوظة':'Also save this order to Saved Orders')));
+        txt.appendChild(mk('div','font-size:11.5px;opacity:.85;margin-top:3px;line-height:1.6;',ar?'اختياري — علّم عليه قبل اختيار الإجراء':'Optional — tick it before choosing an action'));
+        row.appendChild(saveChk); row.appendChild(txt); card.appendChild(row);
+      }
       const opt=(title,hint,css,val)=>{
         const b=mk('button','width:100%;text-align:start;padding:12px 12px;border-radius:12px;margin-top:8px;font-family:inherit;cursor:pointer;'+css); b.type='button'; b.className='no-sound';
         b.appendChild(mk('div','font-size:14px;font-weight:800;',title)); b.appendChild(mk('div','font-size:11.5px;opacity:.85;margin-top:3px;line-height:1.6;',hint));
@@ -8647,22 +8656,14 @@ async function logCurrentOrderToPoOrders(poRows){
 async function shareFile(){
   if (entries.length === 0){ toast(t('toastNoDataSend'), 'warning'); return; }
   // Two options: share the file and then add the data to PoOrders.csv, or add the data without sharing.
-  const mode = await askShareMode('PoOrders.csv');
+  const canOfferSave = !!(document.getElementById('orderNo').value.trim() && document.getElementById('responsible').value.trim());
+  const mode = await askShareMode('PoOrders.csv', canOfferSave);
   if (!mode) return;
   // Writing to GitHub needs a connection: offline nothing is shared or uploaded, and the order simply stays on the device.
   if (!navigator.onLine && mode === 'share'){ toast(lang==='ar'?'يجب الاتصال بالإنترنت لمشاركة الملف ورفع البيانات':'An internet connection is required to share the file and upload the data','warning'); return; }
 
-  // Ask whether to also save this order to Saved Orders first. Saving never blocks or changes what follows.
-  try{
-    const orderNoField = document.getElementById('orderNo').value.trim();
-    const responsibleField = document.getElementById('responsible').value.trim();
-    if (orderNoField && responsibleField){
-      const wantsSave = await customConfirm(lang==='ar'
-        ? (mode==='share' ? 'هل تريد حفظ هذا الأمر في الأوامر المحفوظة قبل المشاركة؟' : 'هل تريد حفظ هذا الأمر في الأوامر المحفوظة قبل الرفع؟')
-        : (mode==='share' ? 'Do you want to save this order to Saved Orders before sharing it?' : 'Do you want to save this order to Saved Orders before uploading it?'));
-      if (wantsSave) await saveCurrentOrder();
-    }
-  }catch(e){}
+  // The "also save this order to Saved Orders" tick of the options card. Saving never blocks or changes what follows.
+  try{ if (canOfferSave && askShareMode.saveChecked) await saveCurrentOrder(); }catch(e){}
 
   try{
     const orderNo = document.getElementById('orderNo').value.trim() || '—';
