@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.9.1 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1283,7 +1283,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.9.1';
+const APP_VERSION='v6.9.2';
 const APP_VERSION_DATE='2026-10-18';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -3918,16 +3918,17 @@ function waNoticeMarkSent(sig){
     localStorage.setItem(WA_NOTIFIED_KEY,JSON.stringify(m));
   }catch(e){}
 }
+function waNoticeModeNow(){ const st=window.__lastUploadStats||{}; return (st.updated>0)?(st.added>0?'both':'update'):'new'; }
 function buildWaInfoFromPoRows(rows){
   rows=rows||[];
-  return {kind:'po',no:waNoticeUnique(rows.map(r=>r[2])).join('، '),name:'',actions:waNoticeUnique(rows.map(r=>waNoticeActionAr(r[1]))),count:rows.length,
+  return {mode:waNoticeModeNow(),kind:'po',no:waNoticeUnique(rows.map(r=>r[2])).join('، '),name:'',actions:waNoticeUnique(rows.map(r=>waNoticeActionAr(r[1]))),count:rows.length,
     sig:'po|'+waNoticeHash(JSON.stringify(rows))};
 }
 async function buildWaInfoFromSheet(sheet,list){
   const items=(list||[]).filter(r=>r&&r.itemCode);
   let name=''; try{ name=await resolvePrivateFileSheetName(sheet); }catch(e){ name=String((sheet&&(sheet.sheetName||sheet.name))||''); }
   const sheetKey=String((sheet&&(sheet.sheetNo||sheet.name))||'');
-  return {kind:'file',no:sheetKey,name:String(name||''),
+  return {mode:waNoticeModeNow(),kind:'file',no:sheetKey,name:String(name||''),
     actions:waNoticeUnique(items.map(r=>waNoticeActionAr(r.actionType||(sheet&&sheet.actionType)||''))),count:items.length,
     sig:'file|'+sheetKey+'|'+waNoticeHash(items.map(r=>[r.itemCode,r.shelf||'',r.scanDate||'',r.scanTime||'',r.actionType||''].join('|')).join('~'))};
 }
@@ -3936,7 +3937,8 @@ function buildWaNoticeText(info){
   //   السادة الزملاء / تحية طيبة وبعد،،،، / تم رفع ملف رقم: X  -  بأسم: Y / نوع الإجراء: Z  -  عدد الأصناف: N / برجاء اتخاذ اللازم / وشكراً
   const SEP='  -  ';
   const v=(x)=>String(x==null?'':x).trim()||'—';
-  let l3='تم رفع '+(info.kind==='po'?'أمر توريد':'ملف')+' رقم: '+v(info.no);
+  const verb=info.mode==='update'?'تم تعديل ':(info.mode==='both'?'تم رفع وتعديل ':'تم رفع ');
+  let l3=verb+(info.kind==='po'?'أمر توريد':'ملف')+' رقم: '+v(info.no);
   if(info.kind!=='po'&&info.name)l3+=SEP+'بأسم: '+v(info.name);
   const l4='نوع الإجراء: '+v((info.actions&&info.actions.length)?info.actions.join(' / '):'')+SEP+'عدد الأصناف: '+v(info.count||0);
   return ['السادة الزملاء','تحية طيبة وبعد،،،،',l3,l4,'برجاء اتخاذ اللازم','وشكراً'].join('\n');
@@ -3950,7 +3952,7 @@ function offerWhatsAppNotice(info){
     const card=document.createElement('div');
     card.style.cssText='width:100%;max-width:420px;max-height:92vh;overflow-y:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:16px;box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.45);';
     const mk=(tag,css,txt)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(txt!=null)e.textContent=txt;return e;};
-    card.appendChild(mk('div','font-size:15px;font-weight:800;margin-bottom:4px;','✅ '+(ar?'تم الرفع — إرسال إشعار للجروب؟':'Uploaded — notify the group?')));
+    card.appendChild(mk('div','font-size:15px;font-weight:800;margin-bottom:4px;','✅ '+(info&&info.mode==='update'?(ar?'تم التعديل — إرسال إشعار للجروب؟':'Updated — notify the group?'):(info&&info.mode==='both'?(ar?'تم الرفع والتعديل — إرسال إشعار للجروب؟':'Uploaded & updated — notify the group?'):(ar?'تم الرفع — إرسال إشعار للجروب؟':'Uploaded — notify the group?')))));
     card.appendChild(mk('div','font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;',ar?'تقدر تعدّل الرسالة قبل الإرسال. هيفتح واتساب والرسالة جاهزة، واختار الجروب واضغط إرسال.':'You can edit the message first. WhatsApp opens with it ready: pick the group and press Send.'));
     const ta=mk('textarea','width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;line-height:1.9;text-align:right;resize:vertical;');
     ta.rows=9; ta.value=buildWaNoticeText(info); ta.setAttribute('dir','rtl'); card.appendChild(ta); // the message is Arabic: always right-to-left, whatever the app language
@@ -6197,7 +6199,7 @@ async function appendRowsToLogCsv(path,headers,rows,commitMessage,baseCount,keyN
       const used=exist.map(()=>false), pend=[]; fresh=[];
       rows.forEach(m=>{ const vals=m.slice(0,nBase).map(cell); const l=byKey.get(lk(vals))||[]; const hit=l.find(x=>!used[x]&&fullKey(exist[x].vals)===fullKey(vals)); if(hit===undefined)pend.push(vals); else used[hit]=true; });
       pend.forEach(vals=>{
-        const l=byKey.get(lk(vals))||[]; const hit=l.find(x=>!used[x]);
+        const l=byKey.get(lk(vals))||[]; const hit=l.slice().reverse().find(x=>!used[x]); // the NEWEST row when the file holds several for that line
         if(hit===undefined){ fresh.push(vals); return; }
         used[hit]=true; const row=matrix[exist[hit].r]; while(row.length<matrix[0].length)row.push('');
         at.forEach((fi,k)=>{ row[fi]=vals[k]; }); updated++;
@@ -6206,6 +6208,7 @@ async function appendRowsToLogCsv(path,headers,rows,commitMessage,baseCount,keyN
       const have=new Set(matrix.slice(1).map(r=>at.map(i=>cell(r[i])).join(SEP)));
       fresh=rows.filter(r=>!have.has(r.slice(0,nBase).map(cell).join(SEP)));
     }
+    window.__lastUploadStats={added:fresh.length,updated:updated};
     if(!fresh.length&&!updated)return true;
     fresh.forEach(r=>{const o=new Array(matrix[0].length).fill('');at.forEach((fi,k)=>{o[fi]=cell(r[k]);});matrix.push(o);});
     try{
@@ -6266,7 +6269,8 @@ async function upsertRowsToPrivateFileCsv(rows){
     rows.forEach(r=>{ const o=toObj(r); const k=keyOf(o.sheetNo,o.code); if(!groups.has(k))groups.set(k,[]); groups.get(k).push(o); });
     const isScanned=(o)=>!!(cell(o.shelf)||cell(o.scanDate));
     const same=(row,o)=>Object.keys(P).every(k=>cell(row[P[k]])===cell(o[k]));
-    const append=(o)=>{ const row=new Array(hdr.length).fill(''); Object.keys(P).forEach(k=>{row[P[k]]=String(o[k]==null?'':o[k]);}); matrix.push(row); };
+    let addedN=0, updatedN=0;
+    const append=(o)=>{ const row=new Array(hdr.length).fill(''); Object.keys(P).forEach(k=>{row[P[k]]=String(o[k]==null?'':o[k]);}); matrix.push(row); addedN++; };
     let changes=0;
     groups.forEach((inc,k)=>{
       const ex=(existing.get(k)||[]).slice(), used=new Set(), pending=[];
@@ -6275,7 +6279,8 @@ async function upsertRowsToPrivateFileCsv(rows){
       pending.forEach(o=>{
         if(!isScanned(o)){ unscanned.push(o); return; }
         const ph=ex.find(i=>!used.has(i)&&!cell(matrix[i][P.shelf])&&!cell(matrix[i][P.scanDate]));
-        const tgt=ph!==undefined?ph:ex.find(i=>!used.has(i)); // same sheet code + same item: the existing row is UPDATED
+        // same sheet code + same item: the existing row is UPDATED — the NEWEST one when the file holds several rows for that item
+        const tgt=ph!==undefined?ph:ex.slice().reverse().find(i=>!used.has(i));
         if(tgt!==undefined){
           used.add(tgt); const row=matrix[tgt]; while(row.length<hdr.length)row.push('');
           row[P.shelf]=String(o.shelf==null?'':o.shelf); row[P.scanDate]=String(o.scanDate==null?'':o.scanDate);
@@ -6284,11 +6289,13 @@ async function upsertRowsToPrivateFileCsv(rows){
           if(cell(o.action))row[P.action]=String(o.action);
           if(cell(o.sheetName))row[P.sheetName]=String(o.sheetName);
           if(cell(o.dept))row[P.dept]=String(o.dept);
+          updatedN++;
         }else{ append(o); appended++; }
         changes++;
       });
       unscanned.forEach(o=>{ if(ex.length+appended<inc.length){ append(o); appended++; changes++; } });
     });
+    window.__lastUploadStats={added:addedN,updated:updatedN};
     if(!changes)return true;
     try{
       await githubPutFile(path,serializeCSVMatrix(matrix),current.sha,'Warehouse Scanner: add/update '+changes+' private file line(s)');
@@ -6461,7 +6468,7 @@ async function finalizeShelfLinkShare(sheet,list){
     if(job.doneScan&&job.donePrivate){
       toast(isPublic
         ? (ar?'✅ تم تأكيد تسجيل المسح (OK) في الملف العام وإضافة البيانات في PrivateFile':'✅ Scan confirmed (OK) in the Public File and data added to PrivateFile')
-        : (ar?'✅ تم تأكيد إضافة البيانات في PrivateFile':'✅ Data confirmed in PrivateFile'),'success');
+        : uploadStatsText('PrivateFile'),'success');
     }else{
       const miss=[]; if(!job.doneScan)miss.push(ar?'علامة OK في الملف العام':'the OK mark in the Public File'); if(!job.donePrivate)miss.push('PrivateFile');
       toast((ar?'⚠️ لم يكتمل تسجيل: ':'⚠️ Not completed yet: ')+miss.join(ar?' و ':' & ')+(ar?' — سيُعاد المحاولة تلقائيًا':' — will retry automatically'),'warning');
@@ -8638,6 +8645,13 @@ function buildPoRowsFromEntries(list,fallbackOrderNo){
 function buildPoOrderRows(){ return buildPoRowsFromEntries(entries); }
 // Called only after the share really happened. The job is saved in the same pending queue as the PrivateFile one BEFORE any network
 // call, then awaited and confirmed to the user; if it cannot finish (offline, GitHub error, app closed) it is retried automatically.
+// What the last confirmed write really did: rows UPDATED (same file code + item code, something changed) and rows ADDED.
+function uploadStatsText(fileName){
+  const ar=lang==='ar', st=window.__lastUploadStats||{added:0,updated:0}, u=st.updated|0, a=st.added|0;
+  if(!u&&!a)return ar?('✅ لا توجد تغييرات — البيانات مطابقة لما في '+fileName):('✅ No changes — the data already matches '+fileName);
+  const parts=[]; if(u)parts.push(ar?('تعديل '+u):('updated '+u)); if(a)parts.push(ar?('إضافة '+a):('added '+a));
+  return '✅ '+(ar?'تم تأكيد ':'Confirmed ')+(ar?'':'in '+fileName+': ')+parts.join(ar?' و ':' & ')+(ar?(' في '+fileName):'');
+}
 async function logCurrentOrderToPoOrders(poRows){
   try{
     const rows=(poRows&&poRows.length)?poRows:buildPoOrderRows();
@@ -8648,7 +8662,7 @@ async function logCurrentOrderToPoOrders(poRows){
     clearShareIntent(); // the share is now safely queued
     toast(ar?'جاري تسجيل الأمر...':'Recording the order...','info');
     await runShareSyncJob(job);
-    if(job.donePo)toast(ar?'✅ تم تأكيد إضافة بيانات الأمر في PoOrders':'✅ Order data confirmed in PoOrders','success');
+    if(job.donePo)toast(uploadStatsText('PoOrders'),'success');
     else toast(ar?'⚠️ لم يكتمل تسجيل الأمر في PoOrders — سيُعاد المحاولة تلقائيًا':'⚠️ Order not recorded in PoOrders yet — will retry automatically','warning');
     return !!job.donePo; // true ONLY when the rows are confirmed in PoOrders.csv
   }catch(e){ try{diagLogError('po-share-finalize',e);}catch(_){} return false; }
