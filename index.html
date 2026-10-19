@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.4 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.4 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.4 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.9.2 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.9.4 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1039,8 +1039,8 @@ window.DATA_GITHUB_CONFIG = {
     <div style="margin-top:8px;">
       <select id="adSourceFilter" onchange="renderAllFilesReport()" style="width:100%; box-sizing:border-box; background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:7px 9px;">
         <option value="all" data-ad="sAll"></option>
-        <option value="PoOrders">PoOrders</option>
-        <option value="PrivateFile">PrivateFile</option>
+        <option value="PoOrders">أوامر التوريد</option>
+        <option value="PrivateFile">الملفات الخاصة</option>
       </select>
     </div>
     <div style="margin-top:8px;">
@@ -1283,7 +1283,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.9.2';
+const APP_VERSION='v6.9.4';
 const APP_VERSION_DATE='2026-10-18';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -1461,7 +1461,7 @@ async function diagBuildRows(){
       const bytes=await fuFileSizeBytes();
       if(bytes!=null){
         const kb=bytes/1024;
-        add(ar?'حجم FileUploade.csv':'FileUploade.csv size',diagLtr(kb>=1024?(kb/1024).toFixed(2)+' MB':kb.toFixed(0)+' KB'),bytes>900*1024);
+        add(ar?'حجم بيانات الملفات العامة':'Public files data size',diagLtr(kb>=1024?(kb/1024).toFixed(2)+' MB':kb.toFixed(0)+' KB'),bytes>900*1024);
       }
     }catch(e){}
     // last archive, automatic or manual — Admin only (this whole block is inside if(admin))
@@ -2775,6 +2775,11 @@ function updateFileUploadReportEntry(){
 // row-click detail and PDF/Excel export as the Public Files report. One line per document (SheetNo / PoNo).
 // Mode 'po' = PoOrders + PrivateFile logs; mode 'fu' = FileUploade + FileUploadeBackup. The first six item columns are
 // identical in both modes (Item Code, Item Name, ShelfNo, ActionType, Emp.No/PersonalName, Employee Name) — item search relies on that.
+// File names are for the programmer: users see these friendly names (the internal source value is unchanged, so filters keep working).
+function adSrcLabel(x){
+  const ar=lang==='ar', m={PoOrders:ar?'أوامر التوريد':'Supply orders',PrivateFile:ar?'الملفات الخاصة':'Private files',FileUploade:ar?'الملفات العامة':'Public files',FileUploadeBackup:ar?'الملفات العامة (نسخة احتياطية)':'Public files (backup)'};
+  return m[x]||x;
+}
 const AD_MODES={
   po:{sources:['PoOrders','PrivateFile'],kind:'allfiles',
     title:['تقرير أوامر التوريد والملفات الخاصة','PO & Private Files report'],detailTitle:['تفاصيل المستند','Document details'],
@@ -2783,7 +2788,7 @@ const AD_MODES={
     ix:{code:0,name:1,shelf:2,action:3,emp:[4,5]},
     emp:[6,7],del:-1},
   fu:{sources:['FileUploade','FileUploadeBackup'],kind:'fileupload',
-    title:['تقرير الملفات العامة (FileUploade)','Public Files report (FileUploade)'],detailTitle:['تفاصيل الملف','Sheet details'],
+    title:['تقرير الملفات العامة','Public Files report'],detailTitle:['تفاصيل الملف','Sheet details'],
     cols:['Source','Department','SheetNo.','SheetName','ActionType','Items','Upload date','Trans.Status','PersonalName','Employee Name','Trans.Date','Deletion','Deletion date'], // Trans.Date = latest transfer, date + time
     detailCols:['ActionType','Item Code','Item Name','Upload date','Trans.Status','PersonalName','Employee Name','Trans.Date','Scanned','ShelfNo','Scan.Date','Deletion','Deletion date'],
     ix:{code:1,name:2,shelf:9,action:0,emp:[5,6]}, // positions inside detailCols (used by item search / highlight)
@@ -2873,7 +2878,7 @@ function adSetMode(m){
   adReport={all:[],rows:[],itemsByKey:{},loadedAt:0,state:'idle',error:'',scopeNote:'',failed:[],namesOk:true};
   const mk=(v,key,txt)=>{const o=document.createElement('option');o.value=v;if(key)o.setAttribute('data-ad',key);if(txt)o.textContent=txt;return o;};
   const sf=document.getElementById('adSourceFilter');
-  if(sf){sf.textContent='';sf.appendChild(mk('all','sAll'));M.sources.forEach(x=>sf.appendChild(mk(x,'',x)));sf.value='all';}
+  if(sf){sf.textContent='';sf.appendChild(mk('all','sAll'));M.sources.forEach(x=>sf.appendChild(mk(x,'',adSrcLabel(x))));sf.value='all';}
   const ff=document.getElementById('adFieldFilter');
   if(ff){
     ff.textContent='';
@@ -2991,10 +2996,10 @@ function adRebuild(){
 function adCells(r){
   const ar=diagIsAr();
   if(adMode==='fu'){
-    return[r.src,r.department,r.docNo,r.docName,r.actionType,r.items,r.uploadDate,r.transStatus||'',r.empNo,r.empName,fuJoinDT(r.date,r.time),
+    return[adSrcLabel(r.src),r.department,r.docNo,r.docName,r.actionType,r.items,r.uploadDate,r.transStatus||'',r.empNo,r.empName,fuJoinDT(r.date,r.time),
       r.deletion==='OK'?'OK':(r.deletion==='PARTIAL'?(ar?'جزئي':'Partial'):''),r.deletionDate||''];
   }
-  return[r.src,r.department,r.docNo,r.docName,r.actionType,r.items,r.empNo,r.empName,fuJoinDT(r.date,r.time)];
+  return[adSrcLabel(r.src),r.department,r.docNo,r.docName,r.actionType,r.items,r.empNo,r.empName,fuJoinDT(r.date,r.time)];
 }
 function adMatches(c,q,field){
   if(!q)return true;
@@ -3116,9 +3121,9 @@ function renderAllFilesReport(){
     const c=adCompute(),shown=c.shown;
     if(sum){
       const per={};adReport.rows.forEach(r=>{per[r.src]=(per[r.src]||0)+1;});
-      sum.textContent=AD_SOURCES.map(s=>s+': '+(per[s]||0)).join(' · ')+' — '+shown.length+(ar?' ملف معروض':' shown')+' · '+adReport.scopeNote+' · '+(ar?'آخر تحديث ':'updated ')+diagPlain(diagFmtTime(adReport.loadedAt))
+      sum.textContent=AD_SOURCES.map(s=>adSrcLabel(s)+': '+(per[s]||0)).join(' · ')+' — '+shown.length+(ar?' ملف معروض':' shown')+' · '+adReport.scopeNote+' · '+(ar?'آخر تحديث ':'updated ')+diagPlain(diagFmtTime(adReport.loadedAt))
         +(adReport.namesOk?'':(ar?' · تعذر تحميل أسماء الموظفين':' · employee names unavailable'))
-        +(adReport.failed.length?((ar?' · تعذر تحميل: ':' · could not load: ')+adReport.failed.join(', ')):'');
+        +(adReport.failed.length?((ar?' · تعذر تحميل: ':' · could not load: ')+adReport.failed.map(adSrcLabel).join(', ')):'');
     }
     if(adDupeOnly){
       const d=document.createElement('div');
@@ -3171,7 +3176,7 @@ function renderAllFilesDetail(){
   const ar=diagIsAr(),summary=adReport.rows.find(r=>r.key===adDetailKey),items=adReport.itemsByKey[adDetailKey]||[];
   head.textContent='';box.textContent='';
   if(!summary){const d=document.createElement('div');d.style.cssText='padding:24px 8px;text-align:center;color:var(--muted);';d.textContent=ar?'المستند ده مش موجود في التقرير الحالي':'This document is not in the current report';box.appendChild(d);return;}
-  [[ar?'المصدر':'Source',summary.src],[ar?'رقم المستند':'Doc No.',summary.docNo||'—'],[ar?'الاسم':'Name',summary.docName||'—'],[ar?'القسم':'Department',summary.department||'—'],[ar?'عدد الأصناف':'Items',items.length]].forEach(r=>{
+  [[ar?'المصدر':'Source',adSrcLabel(summary.src)],[ar?'رقم المستند':'Doc No.',summary.docNo||'—'],[ar?'الاسم':'Name',summary.docName||'—'],[ar?'القسم':'Department',summary.department||'—'],[ar?'عدد الأصناف':'Items',items.length]].forEach(r=>{
     const w=document.createElement('div');w.style.cssText='padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;';
     const l=document.createElement('div');l.style.cssText='font-size:12px;color:var(--muted);';l.textContent=r[0];
     const v=document.createElement('div');v.style.cssText='font-size:13px;font-weight:700;';v.textContent=String(r[1]);
@@ -3212,12 +3217,12 @@ async function exportAllFilesReportExcel(){
   if(!shown.length){toast(ar?'لا توجد بيانات للتصدير':'No data to export','warning');return false;}
   // Sheet 1: one line per document (as shown). Sheet 2: every item line of those documents.
   const itemsAoa=[['Source','Department',adMode==='fu'?'SheetNo.':'Doc No.',adMode==='fu'?'SheetName':'Name'].concat(AD_DETAIL_COLUMNS)];
-  shown.forEach(x=>{(x.items||[]).forEach(r=>{itemsAoa.push([r.src,r.department,r.docNo,r.docName].concat(adDetailCells([r])[0]));});});
+  shown.forEach(x=>{(x.items||[]).forEach(r=>{itemsAoa.push([adSrcLabel(r.src),r.department,r.docNo,r.docName].concat(adDetailCells([r])[0]));});});
   return exportReportExcel(AD_MODES[adMode].kind,adTitle(),AD_MODES[adMode].kind+'-report',[
     {name:'Documents',aoa:[AD_COLUMNS].concat(shown.map(x=>x.cells)),cols:AD_COLUMNS.map(()=>({wch:16}))},
     {name:'Items',aoa:itemsAoa,cols:itemsAoa[0].map(()=>({wch:16}))}]);
 }
-function adDetailTitle(){const s=adReport.rows.find(r=>r.key===adDetailKey);return adTitle()+' — '+(s?(s.src+' '+s.docNo):'');}
+function adDetailTitle(){const s=adReport.rows.find(r=>r.key===adDetailKey);return adTitle()+' — '+(s?(adSrcLabel(s.src)+' '+s.docNo):'');}
 async function exportAllFilesDetailPdf(render){
   const ar=diagIsAr(),shown=adDetailShown();
   if(!shown.length){toast(ar?'لا توجد بيانات للتصدير':'No data to export','warning');return false;}
@@ -3281,7 +3286,7 @@ const i18n = {
     savedOrdersTitle:'أوامر التوريد المحفوظة', selectAllLabel:'تحديد الكل', deleteBtn:'حذف', bulkChangeGroupBtn:'تغيير الجروب', confirmBulkDeleteEntries:(n)=>`متأكد إنك عايز تمسح ${n} صنف من السجل؟`, toastBulkGroupChanged:(n)=>`✅ اتغيّر الجروب لـ ${n} صنف`, toastBulkEntriesDeleted:(n)=>`✅ اتمسح ${n} صنف من السجل`,
     menuGroupPO:'أمر التوريد', menuGroupUpload:'رفع الملفات', menuGroupUpdate:'تحديث البيانات', menuGroupStatus:'الحالة', menuDiagStatus:'حالة التطبيق والاتصال', menuFuIntegrity:'فحص سلامة FileUploade', supportFormTitle:'مشكلة جديدة للدعم', changePasswordTitle:'تغيير كلمة المرور',
 fuFilterAll:'الكل', fuFilterDepartment:'القسم', fuFilterSheetNo:'رقم الملف', fuFilterActionType:'نوع الحركة', fuFilterPersonalName:'اسم المستخدم', fuFilterDeletion:'الحذف', fuFilterSource:'المصدر', fuFilterItemCode:'كود الصنف', fuFilterScanned:'تم المسح',
-menuProfile:'ملفي الشخصي', ordersBackupBtn:'نسخة احتياطية', ordersRestoreBtn:'استرجاع', menuGroupBackup:'النسخ الاحتياطي', menuBackup:'النسخ الاحتياطي والاسترجاع', reportsFileUploadBtn:'تقرير الملفات العامة (FileUploade)', reportsExportPdfBtn:'تصدير PDF', reportsExportExcelBtn:'تصدير Excel', fuSheetDetailTitle:'تفاصيل الملف', menuGroupExport:'تصدير الملفات والتقارير', menuGroupSettings:'الإعدادات', menuGroupProfile:'الملف الشخصي', menuSound:'الصوت', menuLogout:'تسجيل خروج', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'الملفات الخاصة', menuFileUpload:'الملفات العامة', fileUploadScanned:'تم المسح', menuReports:'التقارير', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر شهر', reportsRangeCustom:'فترة محددة (من - إلى)', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalDraft:'إجمالي قيد التنفيذ', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncDataTitle:'تحديث كل البيانات', syncingNow:'جاري تحديث البيانات...', syncPreparing:'جاري تجهيز التحديث...', syncFileItems:'Items', syncFileShelves:'Shelves', syncFileGroups:'Groups', syncFileUsers:'users', syncFileUpload:'FileUploade', syncLoading:'جاري التحميل...', syncDone:'تم تحديث البيانات بنجاح', syncFailedFile:'فشل التحديث', syncOffline:'لا يوجد اتصال بالإنترنت — تم الاحتفاظ بالنسخة المحلية إن وُجدت', syncAllSuccess:'تم تحديث كل الملفات وحفظ نسخة احتياطية على الجهاز', syncAllPartial:'اكتمل التحديث جزئيًا — راجع حالة كل ملف', syncBackupFailed:'تم التحديث، لكن تعذر حفظ النسخة الاحتياطية لهذا الملف', syncRowsCount:(n)=>`عدد السجلات: ${n}`, syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
+menuProfile:'ملفي الشخصي', ordersBackupBtn:'نسخة احتياطية', ordersRestoreBtn:'استرجاع', menuGroupBackup:'النسخ الاحتياطي', menuBackup:'النسخ الاحتياطي والاسترجاع', reportsFileUploadBtn:'تقرير الملفات العامة', reportsExportPdfBtn:'تصدير PDF', reportsExportExcelBtn:'تصدير Excel', fuSheetDetailTitle:'تفاصيل الملف', menuGroupExport:'تصدير الملفات والتقارير', menuGroupSettings:'الإعدادات', menuGroupProfile:'الملف الشخصي', menuSound:'الصوت', menuLogout:'تسجيل خروج', menuLang:'اللغة', menuTheme:'الوضع الداكن', menuThemeLight:'الوضع الفاتح', menuNewOrder:'أمر جديد', menuSaveOrder:'حفظ الأمر', menuSavedOrders:'الأوامر المحفوظة', menuShelfLink:'الملفات الخاصة', menuFileUpload:'الملفات العامة', fileUploadScanned:'تم المسح', menuReports:'التقارير', reportsRangeAll:'كل الفترات', reportsRange7:'آخر 7 أيام', reportsRange30:'آخر شهر', reportsRangeCustom:'فترة محددة (من - إلى)', reportsEmptyState:'لسه مفيش بيانات كفاية لعرض تقرير', reportsTotalOrders:'إجمالي الأوامر', reportsTotalSheets:'إجمالي الملفات المرفوعة', reportsTotalDraft:'إجمالي قيد التنفيذ', reportsTotalItems:'إجمالي الأصناف', reportsByType:'التصنيف حسب نوع العملية', reportsTypeSaved:'أمر توريد محفوظ', reportsTypeUploaded:'ملف مرفوع (ربط أصناف بالأرفف)', reportsTypeDraft:'قيد التنفيذ (الشاشة الرئيسية)', reportsByDay:'الأصناف حسب اليوم', reportsByMonth:'الأصناف حسب الشهر', reportsTopItems:'أكتر الأصناف تكرارًا', reportsByResponsible:'أداء كل مسؤول', menuSyncNow:'تحديث البيانات الآن', syncDataTitle:'تحديث كل البيانات', syncingNow:'جاري تحديث البيانات...', syncPreparing:'جاري تجهيز التحديث...', syncFileItems:'Items', syncFileShelves:'Shelves', syncFileGroups:'Groups', syncFileUsers:'المستخدمين', syncFileUpload:'الملفات العامة', syncLoading:'جاري التحميل...', syncDone:'تم تحديث البيانات بنجاح', syncFailedFile:'فشل التحديث', syncOffline:'لا يوجد اتصال بالإنترنت — تم الاحتفاظ بالنسخة المحلية إن وُجدت', syncAllSuccess:'تم تحديث كل الملفات وحفظ نسخة احتياطية على الجهاز', syncAllPartial:'اكتمل التحديث جزئيًا — راجع حالة كل ملف', syncBackupFailed:'تم التحديث، لكن تعذر حفظ النسخة الاحتياطية لهذا الملف', syncRowsCount:(n)=>`عدد السجلات: ${n}`, syncSuccess:'تم تحديث البيانات بنجاح', syncFailed:'فشل التحديث — تحقق من الاتصال بالإنترنت', itemListUpdated:'فيه تحديث جديد لملف الأصناف — تم تحميله تلقائيًا',
     shelfLinkTitle:'ربط أصناف بالأرفف', shelfLinkEmptyState:'ارفع ملف فيه كود الصنف واسمه (عمودين) عشان تبدأ', shelfLinkNamePrompt:'اكتب اسم أو رقم للشيت ده:', shelfLinkResponsiblePrompt:'اسم المسؤول يتم أخذه تلقائيًا من Employee Name للمستخدم الحالي:', confirmDeleteShelfLinkSheet:'متأكد إنك عايز تمسح الشيت ده بالكامل؟ الإجراء ده لا يمكن التراجع عنه.', confirmReplaceShelfLinkList:'عندك قائمة محمّلة بالفعل — رفع ملف جديد هيستبدلها بالكامل. متأكد؟', confirmDeleteShelfLinkRow:'متأكد إنك عايز تمسح الصنف ده من القائمة؟', confirmMoveFileUploadToPrivate:'هل أنت متأكد من نقل هذا الملف؟ سيتم نقل الملف إلى ملف خاص وحذفه من ملف عام. لا يمكن التراجع عن هذا الإجراء.', toastMoveToPrivateSuccess:'✅ تم نقل الملف إلى ملف خاص بنجاح', toastMoveToPrivateFail:'❌ تعذر نقل الملف إلى ملف خاص', toastMoveToPrivateDuplicate:'يوجد ملف خاص بنفس الاسم بالفعل', toastMoveToPrivateNoInternet:'لا يوجد اتصال بالإنترنت', errShelfLinkEmptyFile:'الملف ده فاضي أو مش بالشكل المتوقع (كود الصنف، الاسم)', errShelfLinkNotFound:(code)=>`مرفوض: الرف "${code}" غير موجود في جدول الأرفف`, toastShelfLinkUploaded:(n)=>`✅ اتحمّل ${n} صنف`, toastShelfLinkScanned:(code)=>`✅ اترابط بالرف "${code}"`,
     toastOrderSaved:'تم حفظ الأمر', toastOrdersDeleted:'تم الحذف',
     savedOrdersEmpty:'لسه مفيش أوامر محفوظة', ordersUnit:'أمر', itemsUnit:'صنف', ordersSearchPh:'ابحث برقم الأمر / الاسم / التاريخ', ordersNoMatch:'مفيش أوامر مطابقة للبحث',
@@ -3327,7 +3332,7 @@ menuProfile:'ملفي الشخصي', ordersBackupBtn:'نسخة احتياطية'
     savedOrdersTitle:'Saved Supply Orders', selectAllLabel:'Select all', deleteBtn:'Delete', bulkChangeGroupBtn:'Change group', confirmBulkDeleteEntries:(n)=>`Delete ${n} item(s) from the log?`, toastBulkGroupChanged:(n)=>`✅ Group changed for ${n} item(s)`, toastBulkEntriesDeleted:(n)=>`✅ Deleted ${n} item(s) from the log`,
     menuGroupPO:'PO Order', menuGroupUpload:'Upload Files', menuGroupUpdate:'Update Data', menuGroupStatus:'Status', menuDiagStatus:'App & Connection Status', menuFuIntegrity:'FileUploade Integrity Check', supportFormTitle:'New Support Issue', changePasswordTitle:'Change Password',
 fuFilterAll:'All', fuFilterDepartment:'Department', fuFilterSheetNo:'SheetNo.', fuFilterActionType:'ActionType', fuFilterPersonalName:'PersonalName', fuFilterDeletion:'Deletion', fuFilterSource:'Source', fuFilterItemCode:'Item Code', fuFilterScanned:'Scanned',
-menuProfile:'My Profile', ordersBackupBtn:'Backup', ordersRestoreBtn:'Restore', menuGroupBackup:'Backup', menuBackup:'Backup & Restore', reportsFileUploadBtn:'Public Files report (FileUploade)', reportsExportPdfBtn:'Export PDF', reportsExportExcelBtn:'Export Excel', fuSheetDetailTitle:'File details', menuGroupExport:'Export Files & Reports', menuGroupSettings:'Settings', menuGroupProfile:'Profile', menuLogout:'Log out', menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Private Files', menuFileUpload:'Public Files', fileUploadScanned:'Scanned', menuReports:'Reports', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last month', reportsRangeCustom:'Custom range (from - to)', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalDraft:'Total In Progress', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncDataTitle:'Update All Data', syncingNow:'Syncing data...', syncPreparing:'Preparing update...', syncFileItems:'Items', syncFileShelves:'Shelves', syncFileGroups:'Groups', syncFileUsers:'users', syncFileUpload:'FileUploade', syncLoading:'Loading...', syncDone:'Data updated successfully', syncFailedFile:'Update failed', syncOffline:'No internet connection — the existing local copy remains available', syncAllSuccess:'All files updated and a local backup was saved', syncAllPartial:'Update completed partially — review each file status', syncBackupFailed:'Updated, but the local backup could not be saved', syncRowsCount:(n)=>`Records: ${n}`, syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
+menuProfile:'My Profile', ordersBackupBtn:'Backup', ordersRestoreBtn:'Restore', menuGroupBackup:'Backup', menuBackup:'Backup & Restore', reportsFileUploadBtn:'Public Files report', reportsExportPdfBtn:'Export PDF', reportsExportExcelBtn:'Export Excel', fuSheetDetailTitle:'File details', menuGroupExport:'Export Files & Reports', menuGroupSettings:'Settings', menuGroupProfile:'Profile', menuLogout:'Log out', menuSound:'Sound', menuLang:'Language', menuTheme:'Dark Mode', menuThemeLight:'Light Mode', menuNewOrder:'New Order', menuSaveOrder:'Save Order', menuSavedOrders:'Saved Orders', menuShelfLink:'Private Files', menuFileUpload:'Public Files', fileUploadScanned:'Scanned', menuReports:'Reports', reportsRangeAll:'All time', reportsRange7:'Last 7 days', reportsRange30:'Last month', reportsRangeCustom:'Custom range (from - to)', reportsEmptyState:'Not enough data yet for a report', reportsTotalOrders:'Total Orders', reportsTotalSheets:'Total Uploaded Sheets', reportsTotalDraft:'Total In Progress', reportsTotalItems:'Total Items', reportsByType:'Breakdown by Operation Type', reportsTypeSaved:'Saved Supply Order', reportsTypeUploaded:'Uploaded Sheet (Item-Shelf Link)', reportsTypeDraft:'In Progress (Main Screen)', reportsByDay:'Items by Day', reportsByMonth:'Items by Month', reportsTopItems:'Most Frequent Items', reportsByResponsible:'Performance by Responsible', menuSyncNow:'Sync Data Now', syncDataTitle:'Update All Data', syncingNow:'Syncing data...', syncPreparing:'Preparing update...', syncFileItems:'Items', syncFileShelves:'Shelves', syncFileGroups:'Groups', syncFileUsers:'Users', syncFileUpload:'Public files', syncLoading:'Loading...', syncDone:'Data updated successfully', syncFailedFile:'Update failed', syncOffline:'No internet connection — the existing local copy remains available', syncAllSuccess:'All files updated and a local backup was saved', syncAllPartial:'Update completed partially — review each file status', syncBackupFailed:'Updated, but the local backup could not be saved', syncRowsCount:(n)=>`Records: ${n}`, syncSuccess:'Data synced successfully', syncFailed:'Sync failed — check your internet connection', itemListUpdated:'A new item list update was found and loaded automatically',
     shelfLinkTitle:'Link Items to Shelves', shelfLinkEmptyState:'Upload a file with item code and name (2 columns) to get started', shelfLinkNamePrompt:'Enter a name or number for this sheet:', shelfLinkResponsiblePrompt:'Responsible Name is taken automatically from the current user Employee Name:', confirmDeleteShelfLinkSheet:'Delete this sheet completely? This cannot be undone.', confirmReplaceShelfLinkList:'You already have a loaded list — uploading a new file will fully replace it. Are you sure?', confirmDeleteShelfLinkRow:'Delete this item from the list?', confirmMoveFileUploadToPrivate:'Are you sure you want to transfer this file? The file will be moved to Private File and deleted from Public File. This action cannot be undone.', toastMoveToPrivateSuccess:'✅ File moved to Private File successfully', toastMoveToPrivateFail:'❌ Unable to move file to Private File', toastMoveToPrivateDuplicate:'A private file with the same name already exists', toastMoveToPrivateNoInternet:'No internet connection', errShelfLinkEmptyFile:'This file is empty or not in the expected shape (item code, name)', errShelfLinkNotFound:(code)=>`Rejected: shelf "${code}" not found in the shelf table`, toastShelfLinkUploaded:(n)=>`✅ Loaded ${n} item(s)`, toastShelfLinkScanned:(code)=>`✅ Linked to shelf "${code}"`,
     toastOrderSaved:'Order saved', toastOrdersDeleted:'Deleted',
     savedOrdersEmpty:'No saved orders yet', ordersUnit:'order', itemsUnit:'items', ordersSearchPh:'Search by order number / name / date', ordersNoMatch:'No matching orders',
@@ -3918,17 +3923,18 @@ function waNoticeMarkSent(sig){
     localStorage.setItem(WA_NOTIFIED_KEY,JSON.stringify(m));
   }catch(e){}
 }
-function waNoticeModeNow(){ const st=window.__lastUploadStats||{}; return (st.updated>0)?(st.added>0?'both':'update'):'new'; }
+function waNoticeModeNow(){ const st=window.__lastUploadStats||{}; return (st.updated>0)?(st.added>0?'both':'update'):(st.added>0?'new':'same'); }
+function waNoticeStatsNow(){ const st=window.__lastUploadStats||{}; const u=st.updated|0,a=st.added|0,tot=st.total|0; return {updated:u,added:a,unchanged:Math.max(0,tot-u-a),total:tot}; }
 function buildWaInfoFromPoRows(rows){
   rows=rows||[];
-  return {mode:waNoticeModeNow(),kind:'po',no:waNoticeUnique(rows.map(r=>r[2])).join('، '),name:'',actions:waNoticeUnique(rows.map(r=>waNoticeActionAr(r[1]))),count:rows.length,
+  return {mode:waNoticeModeNow(),stats:waNoticeStatsNow(),fileName:'PoOrders.csv',kind:'po',no:waNoticeUnique(rows.map(r=>r[2])).join('، '),name:'',actions:waNoticeUnique(rows.map(r=>waNoticeActionAr(r[1]))),count:rows.length,
     sig:'po|'+waNoticeHash(JSON.stringify(rows))};
 }
 async function buildWaInfoFromSheet(sheet,list){
   const items=(list||[]).filter(r=>r&&r.itemCode);
   let name=''; try{ name=await resolvePrivateFileSheetName(sheet); }catch(e){ name=String((sheet&&(sheet.sheetName||sheet.name))||''); }
   const sheetKey=String((sheet&&(sheet.sheetNo||sheet.name))||'');
-  return {mode:waNoticeModeNow(),kind:'file',no:sheetKey,name:String(name||''),
+  return {mode:waNoticeModeNow(),stats:waNoticeStatsNow(),fileName:(sheet&&sheet.sourceType==='public'&&sheet.sheetNo)?'FileUploade.csv + PrivateFile.csv':'PrivateFile.csv',kind:'file',no:sheetKey,name:String(name||''),
     actions:waNoticeUnique(items.map(r=>waNoticeActionAr(r.actionType||(sheet&&sheet.actionType)||''))),count:items.length,
     sig:'file|'+sheetKey+'|'+waNoticeHash(items.map(r=>[r.itemCode,r.shelf||'',r.scanDate||'',r.scanTime||'',r.actionType||''].join('|')).join('~'))};
 }
@@ -3952,7 +3958,21 @@ function offerWhatsAppNotice(info){
     const card=document.createElement('div');
     card.style.cssText='width:100%;max-width:420px;max-height:92vh;overflow-y:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:16px;box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.45);';
     const mk=(tag,css,txt)=>{const e=document.createElement(tag);if(css)e.style.cssText=css;if(txt!=null)e.textContent=txt;return e;};
-    card.appendChild(mk('div','font-size:15px;font-weight:800;margin-bottom:4px;','✅ '+(info&&info.mode==='update'?(ar?'تم التعديل — إرسال إشعار للجروب؟':'Updated — notify the group?'):(info&&info.mode==='both'?(ar?'تم الرفع والتعديل — إرسال إشعار للجروب؟':'Uploaded & updated — notify the group?'):(ar?'تم الرفع — إرسال إشعار للجروب؟':'Uploaded — notify the group?')))));
+    const md=(info&&info.mode)||'new', stt=(info&&info.stats)||{updated:0,added:0,unchanged:0};
+    const title=md==='update'?(ar?'تم تعديل البيانات بنجاح':'Data updated successfully'):md==='both'?(ar?'تم رفع وتعديل البيانات بنجاح':'Data uploaded & updated successfully'):md==='same'?(ar?'البيانات مطابقة — لا توجد تغييرات':'Already up to date — no changes'):(ar?'تم رفع البيانات بنجاح':'Data uploaded successfully');
+    card.appendChild(mk('div','font-size:16px;font-weight:800;margin-bottom:10px;',(md==='same'?'ℹ️ ':'✅ ')+title));
+    // result summary: what was written, where, and how many lines
+    const panel=mk('div','border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:4px 12px;margin-bottom:12px;');
+    const row=(label,val,color)=>{ if(val===''||val==null)return; const r=mk('div','display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;');
+      r.appendChild(mk('span','color:var(--muted);',label)); r.appendChild(mk('span','font-weight:800;'+(color?'color:'+color+';':''),String(val))); panel.appendChild(r); };
+    row(info&&info.kind==='po'?(ar?'رقم الأمر':'Order no.'):(ar?'رقم الملف':'File no.'),(info&&info.no)||'');
+    if(info&&info.kind!=='po'&&info.name)row(ar?'اسم الملف':'File name',info.name);
+    if(stt.updated)row(ar?'تم تعديل':'Modified',stt.updated+(ar?' سطر':' line(s)'),'var(--amber)');
+    if(stt.added)row(ar?'تمت إضافة':'Added',stt.added+(ar?' سطر':' line(s)'),'var(--mint)');
+    if(stt.unchanged)row(ar?'بدون تغيير':'Unchanged',stt.unchanged+(ar?' سطر':' line(s)'));
+    if(panel.lastChild)panel.lastChild.style.borderBottom='none';
+    card.appendChild(panel);
+    card.appendChild(mk('div','font-size:14px;font-weight:800;margin-bottom:4px;','📣 '+(ar?'إرسال إشعار للجروب؟':'Notify the group?')));
     card.appendChild(mk('div','font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;',ar?'تقدر تعدّل الرسالة قبل الإرسال. هيفتح واتساب والرسالة جاهزة، واختار الجروب واضغط إرسال.':'You can edit the message first. WhatsApp opens with it ready: pick the group and press Send.'));
     const ta=mk('textarea','width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;line-height:1.9;text-align:right;resize:vertical;');
     ta.rows=9; ta.value=buildWaNoticeText(info); ta.setAttribute('dir','rtl'); card.appendChild(ta); // the message is Arabic: always right-to-left, whatever the app language
@@ -3987,7 +4007,7 @@ function askShareMode(targets,offerSave){
       let done=false, saveChk=null; const finish=(v)=>{ if(done)return; done=true; askShareMode.saveChecked=!!(v&&saveChk&&saveChk.checked); try{ov.remove();}catch(e){} document.removeEventListener('keydown',onKey); resolve(v); };
       const onKey=(e)=>{ if(e.key==='Escape')finish(null); };
       card.appendChild(mk('div','font-size:15px;font-weight:800;margin-bottom:4px;',ar?'اختر الإجراء':'Choose an action'));
-      if(targets)card.appendChild(mk('div','font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7;',(ar?'تُرفع البيانات إلى: ':'The data is uploaded to: ')+targets));
+      // (the target file names are for the programmer, so they are not shown here)
       if(offerSave){
         // "Save this order to Saved Orders as well" — ticked BEFORE choosing an option; saving never blocks or changes what follows.
         const row=mk('label','display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);cursor:pointer;');
@@ -5089,7 +5109,7 @@ async function openFileUploadMode(){
     syncPublicFilesCountFromLoadedSheets();
     startFileUploadAutoSync();
   }catch(e){
-    toast(lang==='ar'?'تعذر تحميل ملف FileUploade من الإنترنت':'Unable to load FileUploade from the internet','error');
+    toast(lang==='ar'?'تعذر تحميل الملفات العامة من الإنترنت':'Unable to load the public files from the internet','error');
   }
   // FileUploade auto-update disabled.
 }
@@ -5107,7 +5127,7 @@ async function refreshFileUploadMode(){
     await loadFileUploadRows();
     renderFileUploadSheetsList();
   }catch(e){
-    toast(lang==='ar'?'تعذر تحديث ملف FileUploade':'Unable to refresh FileUploade','error');
+    toast(lang==='ar'?'تعذر تحديث الملفات العامة':'Unable to refresh the public files','error');
   }
 }
 /* ==== PF-BADGE-START: Public Files availability badge + gate (added) ====
@@ -5753,7 +5773,7 @@ async function shareFileUploadList(){
   const blob=buildFileUploadCSVBlob(),fileName=fileUploadFileBaseName()+'.csv';
   try{
     if(typeof navigator.share==='function'){
-      try{await navigator.share({files:[new File([blob],fileName,{type:'text/csv'})],title:String(currentFileUploadSheetNo||'FileUploade'),text:String(currentFileUploadSheetNo||'FileUploade')});toast(t('toastShareGuide2'),'success');return;}catch(e){if(e&&e.name==='AbortError')return;}
+      try{await navigator.share({files:[new File([blob],fileName,{type:'text/csv'})],title:String(currentFileUploadSheetNo||(lang==='ar'?'ملف عام':'Public file')),text:String(currentFileUploadSheetNo||(lang==='ar'?'ملف عام':'Public file'))});toast(t('toastShareGuide2'),'success');return;}catch(e){if(e&&e.name==='AbortError')return;}
     }
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fileName;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast(t('toastShareGuide'),'success');
   }catch(err){toast((lang==='ar'?'تعذّر تنزيل الملف: ':'Could not download file: ')+(err&&err.message?err.message:String(err)),'error');}
@@ -6208,7 +6228,7 @@ async function appendRowsToLogCsv(path,headers,rows,commitMessage,baseCount,keyN
       const have=new Set(matrix.slice(1).map(r=>at.map(i=>cell(r[i])).join(SEP)));
       fresh=rows.filter(r=>!have.has(r.slice(0,nBase).map(cell).join(SEP)));
     }
-    window.__lastUploadStats={added:fresh.length,updated:updated};
+    window.__lastUploadStats={added:fresh.length,updated:updated,total:rows.length};
     if(!fresh.length&&!updated)return true;
     fresh.forEach(r=>{const o=new Array(matrix[0].length).fill('');at.forEach((fi,k)=>{o[fi]=cell(r[k]);});matrix.push(o);});
     try{
@@ -6295,7 +6315,7 @@ async function upsertRowsToPrivateFileCsv(rows){
       });
       unscanned.forEach(o=>{ if(ex.length+appended<inc.length){ append(o); appended++; changes++; } });
     });
-    window.__lastUploadStats={added:addedN,updated:updatedN};
+    window.__lastUploadStats={added:addedN,updated:updatedN,total:rows.length};
     if(!changes)return true;
     try{
       await githubPutFile(path,serializeCSVMatrix(matrix),current.sha,'Warehouse Scanner: add/update '+changes+' private file line(s)');
@@ -6466,11 +6486,9 @@ async function finalizeShelfLinkShare(sheet,list){
     toast(ar?'جاري تسجيل المسح...':'Recording the scan...','info');
     await runShareSyncJob(job);
     if(job.doneScan&&job.donePrivate){
-      toast(isPublic
-        ? (ar?'✅ تم تأكيد تسجيل المسح (OK) في الملف العام وإضافة البيانات في PrivateFile':'✅ Scan confirmed (OK) in the Public File and data added to PrivateFile')
-        : uploadStatsText('PrivateFile'),'success');
+      toast((isPublic?(ar?'تم تأكيد المسح (OK) في الملف العام — ':'Scan confirmed (OK) in the Public File — '):'')+uploadStatsText(),uploadStatsNone()&&!isPublic?'':'success');
     }else{
-      const miss=[]; if(!job.doneScan)miss.push(ar?'علامة OK في الملف العام':'the OK mark in the Public File'); if(!job.donePrivate)miss.push('PrivateFile');
+      const miss=[]; if(!job.doneScan)miss.push(ar?'علامة OK في الملف العام':'the OK mark in the Public File'); if(!job.donePrivate)miss.push(ar?'بيانات الملف':'the file data');
       toast((ar?'⚠️ لم يكتمل تسجيل: ':'⚠️ Not completed yet: ')+miss.join(ar?' و ':' & ')+(ar?' — سيُعاد المحاولة تلقائيًا':' — will retry automatically'),'warning');
     }
     return !!(job.doneScan&&job.donePrivate); // true ONLY when everything is confirmed in FileUploade / PrivateFile
@@ -8646,11 +8664,13 @@ function buildPoOrderRows(){ return buildPoRowsFromEntries(entries); }
 // Called only after the share really happened. The job is saved in the same pending queue as the PrivateFile one BEFORE any network
 // call, then awaited and confirmed to the user; if it cannot finish (offline, GitHub error, app closed) it is retried automatically.
 // What the last confirmed write really did: rows UPDATED (same file code + item code, something changed) and rows ADDED.
-function uploadStatsText(fileName){
+function uploadStatsNone(){ const st=window.__lastUploadStats||{}; return !((st.updated|0)||(st.added|0)); }
+function uploadStatsText(){
   const ar=lang==='ar', st=window.__lastUploadStats||{added:0,updated:0}, u=st.updated|0, a=st.added|0;
-  if(!u&&!a)return ar?('✅ لا توجد تغييرات — البيانات مطابقة لما في '+fileName):('✅ No changes — the data already matches '+fileName);
-  const parts=[]; if(u)parts.push(ar?('تعديل '+u):('updated '+u)); if(a)parts.push(ar?('إضافة '+a):('added '+a));
-  return '✅ '+(ar?'تم تأكيد ':'Confirmed ')+(ar?'':'in '+fileName+': ')+parts.join(ar?' و ':' & ')+(ar?(' في '+fileName):'');
+  if(!u&&!a)return ar?'لا توجد تغييرات — البيانات مطابقة لما هو مسجّل':'No changes — the data already matches what is recorded';
+  if(u&&a)return ar?('تم تحديث البيانات — تعديل '+u+' سطر وإضافة '+a+' سطر'):('Data updated — '+u+' line(s) modified, '+a+' added');
+  if(u)return ar?('تم تحديث البيانات — تعديل '+u+' سطر'):('Data updated — '+u+' line(s) modified');
+  return ar?('تم رفع '+a+' سطر بنجاح'):('Uploaded '+a+' line(s) successfully');
 }
 async function logCurrentOrderToPoOrders(poRows){
   try{
@@ -8662,8 +8682,8 @@ async function logCurrentOrderToPoOrders(poRows){
     clearShareIntent(); // the share is now safely queued
     toast(ar?'جاري تسجيل الأمر...':'Recording the order...','info');
     await runShareSyncJob(job);
-    if(job.donePo)toast(uploadStatsText('PoOrders'),'success');
-    else toast(ar?'⚠️ لم يكتمل تسجيل الأمر في PoOrders — سيُعاد المحاولة تلقائيًا':'⚠️ Order not recorded in PoOrders yet — will retry automatically','warning');
+    if(job.donePo)toast(uploadStatsText(),uploadStatsNone()?'':'success');
+    else toast(ar?'⚠️ لم يكتمل رفع بيانات الأمر — سيُعاد المحاولة تلقائيًا':'⚠️ The order data was not uploaded yet — will retry automatically','warning');
     return !!job.donePo; // true ONLY when the rows are confirmed in PoOrders.csv
   }catch(e){ try{diagLogError('po-share-finalize',e);}catch(_){} return false; }
 }
