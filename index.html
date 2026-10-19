@@ -558,7 +558,7 @@ window.DATA_GITHUB_CONFIG = {
       <div class="password-change-net" id="passwordChangeNetStatus"><span class="password-change-net-dot"></span><span id="passwordChangeNetText">Online</span></div>
       <button class="password-change-icon-btn" id="passwordChangeThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton(); updatePasswordChangeThemeButton();" title="Theme">🌙</button>
     </div>
-    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.6 © 2026</div>
+    <div class="password-change-footer">Developed by <b>SYSORA</b> v6.9.7 © 2026</div>
   </div>
 </div>
 <script id="loginNavigationGuard">
@@ -613,7 +613,7 @@ window.DATA_GITHUB_CONFIG = {
       <button class="login-icon-btn" id="loginThemeBtn" type="button" onclick="toggleTheme(); updateLoginThemeButton();" title="Theme">🌙</button>
     </div>
     <div class="login-user-info" id="loginUserInfo"></div>
-    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.6 © 2026</div>
+    <div class="login-footer">Developed by <b>SYSORA</b> v6.9.7 © 2026</div>
      <div style="text-align:center;">
         <img src="./LogoICO.png"
              alt="Sysora Logo"
@@ -636,7 +636,7 @@ window.DATA_GITHUB_CONFIG = {
        </div>
    </div>
     <hr class="splash-divider">
-   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.6 © 2026</div>
+   <div class="splash-credit">Developed by <b>SYSORA</b> v6.9.7 © 2026</div>
    <div> <img class="splash-logo" id="splashLogo" src="./LogoICO.png" alt="Sysora Logo"></div>
 </div>
 <script>
@@ -833,7 +833,7 @@ window.DATA_GITHUB_CONFIG = {
       </div>
     </div>
 
-    <div class="credit">Developed by <b>SYSORA</b> v6.9.6 © 2026</div>
+    <div class="credit">Developed by <b>SYSORA</b> v6.9.7 © 2026</div>
     
     <div style="text-align:center;">
     <img src="./LogoICO.png"
@@ -1283,7 +1283,7 @@ document.addEventListener('click', (e)=>{
 /* ==== DIAG-START: version, connection diagnostics, save-failure warnings (added in v3) ====
    Everything in here only OBSERVES: it never changes a request, a response or a save.
    Every function is wrapped so a problem in this block can never break the app. */
-const APP_VERSION='v6.9.6';
+const APP_VERSION='v6.9.7';
 const APP_VERSION_DATE='2026-10-18';
 const DIAG_KEY='warehouseScannerDiagV1';
 const DIAG_MAX_ERRORS=15;
@@ -6203,7 +6203,7 @@ async function appendRowsToLogCsv(path,headers,rows,commitMessage,baseCount,keyN
     const SEP='\u241F';
     let delRes={removed:0,blocked:0,handled:[]};
     if(path===POORDERS_GITHUB_PATH&&keyNames&&keyNames.length){
-      const col={code:pos[norm('PoNo')],item:pos[norm('Item Code')],shelf:pos[norm('ShelfNo')],scan:pos[norm('Scan.Date')],empNo:pos[norm('Emp.No')],send:pos[norm('EmpNo.Send')],assign:pos[norm('EmpNo.Assign')]};
+      const col={code:pos[norm('PoNo')],item:pos[norm('Item Code')],shelf:pos[norm('ShelfNo')],scan:pos[norm('Scan.Date')],empNo:pos[norm('Emp.No')],extras:['EmpNo.Send','EmpNameSend','SendDate','EmpNo.Assign','EmpNameAssign','AssignDate'].map(h=>pos[norm(h)])};
       const poI=headers.slice(0,nBase).map(norm).indexOf('pono');
       if(poI>=0&&col.code!==undefined&&col.item!==undefined&&col.shelf!==undefined&&col.scan!==undefined&&col.empNo!==undefined)
         delRes=applyLogDeletions(matrix,'po',new Set(rows.map(r=>String(r[poI]==null?'':r[poI]).trim().toLowerCase())),col);
@@ -6290,7 +6290,7 @@ async function upsertRowsToPrivateFileCsv(rows){
     const P={dept:ix.department,sheetNo:ix.sheetno,sheetName:ix.sheetname,action:ix.actiontype,shelf:ix.shelfno,code:ix.itemcode,name:ix.itemname,empNo:ix.empno,empName:ix.empname,scanDate:ix.scandate};
     if(Object.keys(P).some(k=>P[k]===undefined)){ try{diagLogError('log-header:'+path,new Error('a required column is missing'));}catch(_){} return false; }
     const delRes=applyLogDeletions(matrix,'private',new Set(rows.map(r=>String(r[1]==null?'':r[1]).trim().toLowerCase())),
-      {code:P.sheetNo,item:P.code,shelf:P.shelf,scan:P.scanDate,empNo:P.empNo,send:ix.empnosend,assign:ix.empnoassign});
+      {code:P.sheetNo,item:P.code,shelf:P.shelf,scan:P.scanDate,empNo:P.empNo,extras:[ix.empnosend,ix.empnamesend,ix.senddate,ix.empnoassign,ix.empnameassign,ix.assigndate]});
     const keyOf=(sheetNo,code)=>cell(sheetNo)+'\u241F'+cell(code);
     const existing=new Map();
     for(let r=1;r<matrix.length;r++){
@@ -8695,7 +8695,7 @@ function queueLogDeletion(kind,code,item,shelf,scan){
   writeLogDeletes(a);
 }
 // Removes from `matrix` (a log file, header in matrix[0]) the rows the person deleted in the app. col = column indexes
-// {code,item,shelf,scan,empNo,send,assign}. ONE file row per deletion (the one with the same scan date/time if there are several);
+// {code,item,shelf,scan,empNo,extras:[the 6 Send / Assign columns]}. ONE file row per deletion (the one with the same scan date/time if there are several);
 // a row that was already SENT / ASSIGNED, or uploaded by another employee, is never deleted.
 function applyLogDeletions(matrix,kind,codes,col){
   const cl=(v)=>String(v==null?'':v).trim().toLowerCase();
@@ -8710,7 +8710,8 @@ function applyLogDeletions(matrix,kind,codes,col){
       cand.push(r);
     }
     if(!cand.length){ handled.push(d.id); return; } // it is not in the file: nothing to delete
-    const free=cand.filter(r=>!(col.send!==undefined&&cl(matrix[r][col.send]))&&!(col.assign!==undefined&&cl(matrix[r][col.assign])));
+    // a row that has ANY of the six Send / Assign fields filled was already processed: it is never deleted
+    const free=cand.filter(r=>!(col.extras||[]).some(ci=>ci!==undefined&&cl(matrix[r][ci])));
     if(!free.length){ blocked++; handled.push(d.id); return; } // already sent / assigned: kept as it is
     let pick=free.find(r=>d.scan&&cl(matrix[r][col.scan])===cl(d.scan)); if(pick===undefined)pick=free[free.length-1];
     matrix.splice(pick,1); removed++; handled.push(d.id);
