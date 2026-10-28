@@ -637,7 +637,7 @@ window.DATA_GITHUB_CONFIG = {
 
 <div id="splashScreen" class="splash" aria-hidden="false">
   <div class="mark splash-mark" id="splashMark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <div class="splash-title" id="splashTitle">Warehouse Scanner</div>
+  <div class="splash-title" id="splashTitle">SYSORA Warehouse Scanner</div>
   <div class="splash-loading" aria-live="polite">
     <div class="splash-loading-text" id="splashLoadingText">جاري تحميل البيانات وتجهيز البرنامج...</div>
     <div class="splash-progress"><div class="splash-progress-bar" id="splashProgressBar"></div></div>
@@ -672,7 +672,7 @@ window.DATA_GITHUB_CONFIG = {
 <div class="sheet-bg" id="customDialogBg"></div>
 <div class="sheet" id="customDialog">
   <div class="sheet-handle"></div>
-  <div id="customDialogTitle" style="font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--amber-fg); margin-bottom:8px;">Warehouse Scanner (Sysora)</div>
+  <div id="customDialogTitle" style="font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--amber-fg); margin-bottom:8px;">SYSORA Warehouse Scanner (Sysora)</div>
   <div id="customDialogMsg" style="font-family:'Tajawal',sans-serif; font-size:14px; color:var(--text); line-height:1.7; margin-bottom:14px;"></div>
   <input type="text" id="customDialogInput" style="display:none; margin-bottom:6px;" autocomplete="off">
   <div id="customDialogSuggest" style="display:none; margin-bottom:14px; max-height:170px; overflow-y:auto; border:1px solid var(--border); border-radius:9px;"></div>
@@ -2588,7 +2588,7 @@ function buildPdfPage(title,scopeNote,bodyHtml,width){
   wrap.style.cssText='position:fixed; left:-99999px; top:0; width:'+(width||800)+'px; background:#ffffff; color:#141414; padding:28px; box-sizing:border-box; font-family:Tajawal,Cairo,Arial,sans-serif; direction:'+(ar?'rtl':'ltr')+';';
   wrap.innerHTML=
     '<div style="text-align:center;border-bottom:2px solid #d9a441;padding-bottom:10px;margin-bottom:16px;">'
-      +'<div style="font-size:20px;font-weight:800;">Warehouse Scanner</div>'
+      +'<div style="font-size:20px;font-weight:800;">SYSORA Warehouse Scanner</div>'
       +'<div style="font-size:15px;font-weight:700;margin-top:4px;">'+escapeHtml(title)+'</div>'
       +'<div style="font-size:12px;color:#555;margin-top:4px;">'+escapeHtml(scopeNote)+'</div>'
     +'</div>'
@@ -3750,8 +3750,8 @@ async function loadUserContacts(){
 }
 function waDefaultTemplate(mode){
   return mode==='old'
-    ? 'عزيزي {name}،\nيوجد إصدار جديد هو ({latest}) لتطبيق Warehouse Scanner وجهازك يعمل بالإصدار ({version}).\nمن فضلك افتح التطبيق مع اتصال بالإنترنت وحدّثه لآخر إصدار قبل الاستمرار في العمل.\nشكراً.'
-    : 'عزيزي {name}\nتنبيه هام !!!!!\nتم تحديث تطبيق Warehouse Scanner إلى اصدار ({latest})\nفضلاً قم بتحديث التطبيق لآخر إصدار\nشكراً.';
+    ? 'عزيزي {name}،\nيوجد إصدار جديد هو ({latest}) لتطبيق SYSORA Warehouse Scanner وجهازك يعمل بالإصدار ({version}).\nمن فضلك افتح التطبيق مع اتصال بالإنترنت وحدّثه لآخر إصدار قبل الاستمرار في العمل.\nشكراً.'
+    : 'عزيزي {name}\nتنبيه هام !!!!!\nتم تحديث تطبيق SYSORA Warehouse Scanner إلى اصدار ({latest})\nفضلاً قم بتحديث التطبيق لآخر إصدار\nشكراً.';
 }
 function waMessageFor(t){
   const tpl=String((document.getElementById('waTemplate')||{}).value||'');
