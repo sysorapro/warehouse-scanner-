@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Warehouse Scanner</title>
+<title>SYSORA Warehouse Scanner</title>
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="WH Scanner">
+<meta name="apple-mobile-web-app-title" content="SYSORA Warehouse Scanner">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -377,6 +377,8 @@ window.DATA_GITHUB_CONFIG = {
   .login-brand .mark{ height:52px; gap:5px; margin-bottom:10px; }
   .login-brand .mark i{ width:5px; border-radius:2px; }
   .login-title{ font-family:'Cairo'; font-weight:900; font-size:21px; text-align:center; }
+  .product-tagline{font-family:'Cairo',sans-serif;font-size:10px;font-weight:600;line-height:1.4;color:var(--muted);text-align:center;letter-spacing:.1px;margin-top:2px;}
+  .splash-tagline{font-family:'Cairo',sans-serif;font-size:11px;font-weight:600;line-height:1.4;color:var(--muted);text-align:center;letter-spacing:.15px;margin-top:-1px;}
   .login-subtitle{ font-size:12px; color:var(--muted); text-align:center; margin-top:3px; }
   .login-field{ margin-bottom:13px; }
   .login-field label{ font-family:'Cairo'; font-weight:700; }
@@ -593,6 +595,7 @@ window.DATA_GITHUB_CONFIG = {
         <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
       </div>
       <div class="login-title" id="loginTitle">SYSORA Warehouse Scanner</div>
+      <div class="product-tagline">Barcode Scanning &amp; Location Management</div>
       <div class="login-subtitle" id="loginSubtitle">Sign in to continue</div>
 
     </div>
@@ -638,6 +641,7 @@ window.DATA_GITHUB_CONFIG = {
 <div id="splashScreen" class="splash" aria-hidden="false">
   <div class="mark splash-mark" id="splashMark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="splash-title" id="splashTitle">SYSORA Warehouse Scanner</div>
+  <div class="splash-tagline">Barcode Scanning &amp; Location Management</div>
   <div class="splash-loading" aria-live="polite">
     <div class="splash-loading-text" id="splashLoadingText">جاري تحميل البيانات وتجهيز البرنامج...</div>
     <div class="splash-progress"><div class="splash-progress-bar" id="splashProgressBar"></div></div>
@@ -672,7 +676,7 @@ window.DATA_GITHUB_CONFIG = {
 <div class="sheet-bg" id="customDialogBg"></div>
 <div class="sheet" id="customDialog">
   <div class="sheet-handle"></div>
-  <div id="customDialogTitle" style="font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--amber-fg); margin-bottom:8px;">SYSORA Warehouse Scanner (Sysora)</div>
+  <div id="customDialogTitle" style="font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--amber-fg); margin-bottom:8px;">SYSORA Warehouse Scanner</div>
   <div id="customDialogMsg" style="font-family:'Tajawal',sans-serif; font-size:14px; color:var(--text); line-height:1.7; margin-bottom:14px;"></div>
   <input type="text" id="customDialogInput" style="display:none; margin-bottom:6px;" autocomplete="off">
   <div id="customDialogSuggest" style="display:none; margin-bottom:14px; max-height:170px; overflow-y:auto; border:1px solid var(--border); border-radius:9px;"></div>
@@ -707,7 +711,7 @@ window.DATA_GITHUB_CONFIG = {
     <div class="topbar" style="position:relative;">
       <div class="mark"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="brand">
-        <h1 data-i18n="title">سكانر المستودع</h1>
+        <h1 data-i18n="title">SYSORA Warehouse Scanner</h1>
         <p data-i18n="subtitle">مسح الرف والصنف · تسجيل فوري</p>
         <p class="net-status" id="netStatus"><span class="net-dot"></span><span id="netStatusText">Online</span><span id="lastSyncText" style="margin-inline-start:6px; opacity:.75;"></span></p>
       </div>
@@ -2726,7 +2730,7 @@ async function exportMainReportPdf(render){
   return exportReportPdf('main',title,reportRangeLabel(range),buildMainReportPdfHtml(data),'activity-report',render);
 }
 function buildMainReportExcelSheets(data,range){
-  const summary=[['Warehouse Scanner — Activity report'],['Range',reportRangeLabel(range)],['Generated',diagPlain(diagFmtTime(Date.now()))],[],
+  const summary=[['SYSORA Warehouse Scanner — Activity report'],['Range',reportRangeLabel(range)],['Generated',diagPlain(diagFmtTime(Date.now()))],[],
     [t('reportsTotalOrders'),data.totalOrders],[t('reportsTotalSheets'),data.totalSheets],[t('reportsTotalDraft'),data.totalDraftItems],[t('reportsTotalItems'),data.totalItems]];
   const byType=[[t('reportsByType'),'']].concat(data.typeRows.map(r=>[r.label,r.count]));
   const byDay=[[t('reportsByDay'),'']].concat(data.dayRows);
@@ -3301,7 +3305,7 @@ function writeSyncSig(name,sig){try{const o=JSON.parse(localStorage.getItem(SYNC
 const i18n = {
   ar: {
     dir:'rtl', htmlLang:'ar',
-    title:'سكانر المستودع', subtitle:'مسح الرف والصنف · تسجيل فوري',
+    title:'SYSORA Warehouse Scanner', subtitle:'Barcode Scanning & Location Management',
     sectionOrder:'بيانات أمر التوريد', orderNoLabel:'رقم أمر التوريد', orderNoPh:'مثال: PO-2026-014',
     actionTypeLabel:'نوع الإجراء', actionTypePlaceholder:'-- اختر نوع الإجراء --', actionTypeNewOpt:'جديد', actionTypeEditOpt:'تعديل', toastNeedActionType:'من فضلك اختر نوع الإجراء أولاً', toastOrderNoLocked:'رقم أمر التوريد مقفول تلقائيًا في وضع "تعديل"',
     responsibleLabel:'اسم المسؤول', responsiblePh:'اسم الموظف المسؤول',
@@ -3347,7 +3351,7 @@ menuProfile:'ملفي الشخصي', ordersBackupBtn:'نسخة احتياطية'
   },
   en: {
     dir:'ltr', htmlLang:'en',
-    title:'Warehouse Scanner', subtitle:'Shelf & item scan · instant logging',
+    title:'SYSORA Warehouse Scanner', subtitle:'Barcode Scanning & Location Management',
     sectionOrder:'Supply Order Info', orderNoLabel:'Supply Order Number', orderNoPh:'e.g. PO-2026-014',
     actionTypeLabel:'Action Type', actionTypePlaceholder:'-- Select action type --', actionTypeNewOpt:'New', actionTypeEditOpt:'Edit', toastNeedActionType:'Please select the action type first', toastOrderNoLocked:'Supply Order Number is auto-locked in "Edit" mode',
     responsibleLabel:'Responsible Name', responsiblePh:'Employee in charge',
@@ -3854,7 +3858,7 @@ const WA_GROUPS_KEY='wh_wa_groups_v1';
 function waGroupsLoad(){try{const a=JSON.parse(localStorage.getItem(WA_GROUPS_KEY)||'[]');return Array.isArray(a)?a.filter(g=>g&&g.link):[];}catch(e){return[];}}
 function waGroupsSave(a){try{localStorage.setItem(WA_GROUPS_KEY,JSON.stringify(a));}catch(e){}}
 function waGroupDefaultTemplate(){
-  return 'السلام عليكم،\nتم إصدار النسخة {latest} من تطبيق سكانر المستودع.\nالمستخدمين التاليين شغالين على إصدار قديم ومطلوب منهم التحديث:\n{list}\nمن فضلكم افتحوا التطبيق مع اتصال بالإنترنت وحدّثوه لآخر إصدار.\nشكراً.';
+  return 'السلام عليكم،\nتم إصدار النسخة {latest} من تطبيق SYSORA Warehouse Scanner.\nالمستخدمين التاليين شغالين على إصدار قديم ومطلوب منهم التحديث:\n{list}\nمن فضلكم افتحوا التطبيق مع اتصال بالإنترنت وحدّثوه لآخر إصدار.\nشكراً.';
 }
 function waGroupMessage(){
   const tpl=String((document.getElementById('waGroupTemplate')||{}).value||'');
@@ -11043,7 +11047,7 @@ function parseUsersCSV(text){
 
 function usersLoginText(key){
   const ar={
-    title:'سكانر المستودع',
+    title:'SYSORA Warehouse Scanner',
     subtitle:'تسجيل الدخول للمتابعة',
     username:'اسم المستخدم',
     password:'كلمة المرور',
@@ -11059,7 +11063,7 @@ function usersLoginText(key){
     biometric:'دخول بالبصمة'
   };
   const en={
-    title:'Warehouse Scanner',
+    title:'SYSORA Warehouse Scanner',
     subtitle:'Sign in to continue',
     username:'Username',
     password:'Password',
