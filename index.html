@@ -368,10 +368,10 @@ window.DATA_GITHUB_CONFIG = {
     overflow-y:auto;
   }
   #loginGate.hidden{ display:none; }
- .login-card{
-    width:100%; max-width:450px;margin:auto; background:var(--surface);
+  .login-card{
+    width:100%; max-width:450px; margin:auto; background:var(--surface);
     border:1.5px dashed var(--overlay-strong); border-radius:20px;
-    padding:24px 20px; box-shadow:0 14px 40px rgba(0,0,0,.22);
+    padding:30px 20px; box-shadow:0 14px 40px rgba(0,0,0,.22);
   }
   .login-brand{ display:flex; flex-direction:column; align-items:center; margin-bottom:22px; }
   .login-brand .mark{ height:52px; gap:5px; margin-bottom:10px; }
@@ -1326,7 +1326,7 @@ document.addEventListener('click', (e)=>{
 // always above the old v6.x line.
 // Rules: MINOR goes up with EVERY new release and is NOT reset when the year changes (the comparison looks at MINOR before YEAR, so
 // v1.15 (27) is newer than v1.14 (26)); YEAR is the 2-digit year of the release; MAJOR (and the NAME) change for a new generation (MINOR may restart then).
-const APP_MAJOR=1, APP_MINOR=9, APP_YEAR=26, APP_CODENAME='Nova';
+const APP_MAJOR=1, APP_MINOR=10, APP_YEAR=26, APP_CODENAME='Nova';
 const APP_VERSION='v'+(APP_MAJOR+6)+'.'+APP_MINOR+'.'+APP_YEAR;                                    // internal (compared)
 const APP_VERSION_LABEL='v'+APP_MAJOR+'.'+APP_MINOR+' ('+APP_YEAR+') '+APP_CODENAME;                // what people see
 const APP_VERSION_DATE='2026-10-29';
@@ -8952,9 +8952,9 @@ function zwhcReportResult(job){
   try{
     if(!job||!job.zwhcRows||!job.zwhcRows.length)return;
     const ar=lang==='ar';
-    if(!job.doneZwhc){ const why=job.zwhcErr?(' ('+job.zwhcErr+')'):''; toast(ar?('⚠️ لم يكتمل تحديث أماكن الأصناف'+why+' — سيُعاد المحاولة تلقائيًا'):('⚠️ Item locations not updated yet'+why+' — will retry automatically'),'warning',6000); return; }
+    if(!job.doneZwhc){ const why=job.zwhcErr?(' ('+job.zwhcErr+')'):''; showShelfNotice(ar?('⚠️ لم يكتمل تحديث أماكن الأصناف'+why+' — سيُعاد المحاولة تلقائيًا'):('⚠️ Item locations not updated yet'+why+' — will retry automatically'),6500); return; }
     const st=window.__lastZwhcStats||{}, u=st.updated|0, a=st.added|0;
-    if(u||a)toast(ar?('📍 تم تحديث أماكن الأصناف: '+(u?('تعديل '+u):'')+(u&&a?' و':'')+(a?('إضافة '+a):'')):('📍 Item locations: '+(u?(u+' updated'):'')+(u&&a?' & ':'')+(a?(a+' added'):'')),'info',5000);
+    if(u||a)showShelfNotice(ar?('📍 تم تحديث أماكن الأصناف: '+(u?('تعديل '+u):'')+(u&&a?' و':'')+(a?('إضافة '+a):'')):('📍 Item locations: '+(u?(u+' updated'):'')+(u&&a?' & ':'')+(a?(a+' added'):'')),6500);
   }catch(e){}
 }
 async function zwhcReadForWrite(){
