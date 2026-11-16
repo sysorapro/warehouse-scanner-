@@ -1,0 +1,23 @@
+# NotifyOnVersion — put this file in .github/workflows/ of the PUBLIC repo (warehouse-scanner-), next to the app.
+# When version.json is uploaded it tells the private data repo to check for a new version right away, so the notification does not wait for the
+# 15-minute safety check. It needs ONE secret in THIS repo: DATA_REPO_PAT = a fine-grained personal access token with access to the repository
+# warehouse-scanner-Data and the permission "Contents: Read and write". Without the secret nothing breaks: the data repo just notices within ~15 minutes.
+name: NotifyOnVersion
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'version.json'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the data repo to check for a new version
+        env:
+          TOKEN: ${{ secrets.DATA_REPO_PAT }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "DATA_REPO_PAT is not set: the data repo will notice the new version by itself within about 15 minutes."; exit 0; fi
+          code=$(curl -s -o resp.txt -w "%{http_code}" -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $TOKEN" https://api.github.com/repos/sysorapro/warehouse-scanner-Data/dispatches -d '{"event_type":"push-check"}')
+          echo "HTTP $code"; cat resp.txt
+          [ "$code" = "204" ]
